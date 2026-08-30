@@ -67,12 +67,8 @@ export function parseDurationToMinutes(durationStr: string): number {
     return Math.max(0, Math.round(floatVal * 60));
   }
 
-  // Plain integer minutes or hours
+  // Plain integer numbers are treated directly as minutes (e.g. 15 -> 15m, 30 -> 30m, 45 -> 45m)
   const intVal = parseInt(trimmed, 10) || 0;
-  if (intVal > 0 && intVal <= 24) {
-    return intVal * 60; // Assume hours if <= 24 (e.g. 1 -> 60m, 2 -> 120m)
-  }
-
   return Math.max(0, intVal);
 }
 

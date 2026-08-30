@@ -68,7 +68,7 @@ export function TaskLogTable({
   // Fast-Log Bar State
   const [fastProjectId, setFastProjectId] = useState<string>('');
   const [fastDescription, setFastDescription] = useState<string>('');
-  const [fastDurationStr, setFastDurationStr] = useState<string>('1h 00m');
+  const [fastDurationStr, setFastDurationStr] = useState<string>('30m');
   const [fastStatus, setFastStatus] = useState<string>('Done');
   const [isFastSubmitting, setIsFastSubmitting] = useState(false);
   const [fastError, setFastError] = useState<string | null>(null);
@@ -140,7 +140,6 @@ export function TaskLogTable({
       }
 
       setFastDescription('');
-      setFastDurationStr('1h 00m');
       onTaskCreatedOrUpdated();
     } catch (err: any) {
       setFastError(err.message || 'Error logging task');
@@ -153,7 +152,7 @@ export function TaskLogTable({
   const handleDuplicateTask = (task: TaskItem) => {
     setFastProjectId(task.projectId);
     setFastDescription(task.description);
-    setFastDurationStr(formatMinutesToDuration(task.durationMinutes));
+    setFastDurationStr(task.durationMinutes < 60 ? `${task.durationMinutes}m` : formatMinutesToDuration(task.durationMinutes));
     setFastStatus(task.status || 'Done');
 
     window.scrollTo({ top: 120, behavior: 'smooth' });
@@ -284,7 +283,7 @@ export function TaskLogTable({
             type="text"
             value={fastDurationStr}
             onChange={(e) => setFastDurationStr(e.target.value)}
-            placeholder="1h 30m or 45m"
+            placeholder="e.g. 20m or 45"
             className="glass-input text-xs py-2 font-mono w-full sm:w-[110px] shrink-0"
             required
           />

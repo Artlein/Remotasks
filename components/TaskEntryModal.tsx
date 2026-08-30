@@ -40,7 +40,7 @@ export function TaskEntryModal({
   const [date, setDate] = useState<string>('');
   const [projectId, setProjectId] = useState<string>('');
   const [description, setDescription] = useState<string>('');
-  const [durationStr, setDurationStr] = useState<string>('1:00');
+  const [durationStr, setDurationStr] = useState<string>('30m');
   const [status, setStatus] = useState<string>('Done');
   const [notes, setNotes] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,9 +53,11 @@ export function TaskEntryModal({
         setProjectId(initialTask.projectId);
         setDescription(initialTask.description);
         
-        const hrs = Math.floor(initialTask.durationMinutes / 60);
-        const mins = initialTask.durationMinutes % 60;
-        setDurationStr(`${hrs}:${mins.toString().padStart(2, '0')}`);
+        setDurationStr(
+          initialTask.durationMinutes < 60
+            ? `${initialTask.durationMinutes}m`
+            : formatMinutesToDuration(initialTask.durationMinutes)
+        );
 
         setStatus(initialTask.status || 'Done');
         setNotes(initialTask.notes || '');
@@ -74,7 +76,7 @@ export function TaskEntryModal({
           setProjectId(activeProjs[0].id);
         }
         setDescription('');
-        setDurationStr('1:00');
+        setDurationStr('30m');
         setStatus('Done');
         setNotes('');
       }
@@ -258,13 +260,13 @@ export function TaskEntryModal({
             <div>
               <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-cyan-400" />
-                Duration (H:MM)
+                Duration (e.g. 25m, 45, 1:15)
               </label>
               <input
                 type="text"
                 value={durationStr}
                 onChange={(e) => setDurationStr(e.target.value)}
-                placeholder="1:30 or 0:45"
+                placeholder="e.g. 25m or 45"
                 className="w-full glass-input text-sm font-mono"
                 required
               />
@@ -272,11 +274,12 @@ export function TaskEntryModal({
               {/* Quick Duration Pills */}
               <div className="flex items-center gap-1 mt-2 overflow-x-auto pb-0.5">
                 {[
+                  { label: '10m', mins: 10 },
+                  { label: '15m', mins: 15 },
+                  { label: '20m', mins: 20 },
                   { label: '30m', mins: 30 },
                   { label: '45m', mins: 45 },
                   { label: '1h', mins: 60 },
-                  { label: '1:30', mins: 90 },
-                  { label: '2h', mins: 120 },
                 ].map((pill) => (
                   <button
                     key={pill.label}
