@@ -11,6 +11,7 @@ import { ProjectManagerModal } from '@/components/ProjectManagerModal';
 import { ImportExportModal } from '@/components/ImportExportModal';
 import { SettingsModal } from '@/components/SettingsModal';
 import { SmartReminder } from '@/components/SmartReminder';
+import { LiveTimerWidget } from '@/components/LiveTimerWidget';
 import { getLogicalDate } from '@/lib/logical-day';
 import {
   DEFAULT_PROJECTS,
@@ -321,15 +322,33 @@ export default function DashboardPage() {
           })}
         </div>
 
-        <button
-          onClick={() => {
-            setEditingTask(null);
-            setIsTaskModalOpen(true);
-          }}
-          className="hidden sm:flex items-center gap-1.5 skeuo-button px-3.5 py-1.5 text-xs font-semibold"
-        >
-          <Plus className="w-3.5 h-3.5 stroke-[2.5]" /> Log Task
-        </button>
+        <div className="flex items-center gap-3">
+          <LiveTimerWidget 
+            projects={projects}
+            onStopTimer={(minutes, projectId) => {
+              setEditingTask({
+                id: '',
+                date: activeDate,
+                projectId: projectId,
+                project: projects.find(p => p.id === projectId),
+                description: '',
+                durationMinutes: minutes,
+                status: 'Done',
+                notes: ''
+              } as TaskItem);
+              setIsTaskModalOpen(true);
+            }}
+          />
+          <button
+            onClick={() => {
+              setEditingTask(null);
+              setIsTaskModalOpen(true);
+            }}
+            className="hidden sm:flex items-center gap-1.5 skeuo-button px-3.5 py-1.5 text-xs font-semibold"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" /> Log Task
+          </button>
+        </div>
       </div>
 
       {/* Tab Content */}
