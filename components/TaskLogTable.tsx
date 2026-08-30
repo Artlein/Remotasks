@@ -77,12 +77,22 @@ export function TaskLogTable({
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 15;
 
+  const FALLBACK_PROJECTS: Project[] = [
+    { id: 'fna1', name: 'FNA1', active: true },
+    { id: 'crane_gamer', name: 'Crane_Gamer', active: true },
+    { id: 'ego_vlm', name: 'Ego_VLM', active: true },
+    { id: 'duck', name: 'Duck', active: true },
+    { id: 'aloha_ots', name: 'Aloha_OTS', active: true },
+    { id: 'cobra', name: 'Cobra', active: true },
+  ];
+
   // Active Projects List
-  const activeProjects = projects.filter((p) => p.active);
+  const activeProjects = projects.length > 0 ? projects.filter((p) => p.active) : FALLBACK_PROJECTS;
+  const filterProjects = projects.length > 0 ? projects : FALLBACK_PROJECTS;
 
   // Set default project ID for fast log if empty
   React.useEffect(() => {
-    if (!fastProjectId && activeProjects.length > 0) {
+    if ((!fastProjectId || !activeProjects.some(p => p.id === fastProjectId)) && activeProjects.length > 0) {
       setFastProjectId(activeProjects[0].id);
     }
   }, [activeProjects, fastProjectId]);
@@ -345,7 +355,7 @@ export function TaskLogTable({
               className="glass-input text-xs bg-slate-900 py-2 min-w-[140px] cursor-pointer"
             >
               <option value="ALL">All Projects</option>
-              {projects.map((p) => (
+              {filterProjects.map((p) => (
                 <option key={p.id} value={p.id} className="bg-slate-900 text-white">
                   {p.name}
                 </option>

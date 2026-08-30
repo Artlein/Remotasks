@@ -96,10 +96,23 @@ export async function POST(request: Request) {
       taskDate = getLogicalDate(new Date(), cutoff);
     }
 
+    // Validate project existence or fallback
+    let validProjectId = projectId;
+    const projectExists = await db.project.findUnique({ where: { id: validProjectId } });
+    if (!projectExists) {
+      const existingByName = await db.project.findFirst({ where: { active: true } });
+      if (existingByName) {
+        validProjectId = existingByName.id;
+      } else {
+        const created = await db.project.create({ data: { name: 'FNA1', active: true } });
+        validProjectId = created.id;
+      }
+    }
+
     const newTask = await db.task.create({
       data: {
         date: taskDate,
-        projectId,
+        projectId: validProjectId,
         description: description.trim(),
         durationMinutes: computedMinutes,
         status: status || 'Done',

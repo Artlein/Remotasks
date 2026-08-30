@@ -61,7 +61,15 @@ export function TaskEntryModal({
         setNotes(initialTask.notes || '');
       } else {
         setDate(getLogicalDate(new Date(), cutoffHour));
-        const activeProjs = projects.filter((p) => p.active);
+        const FALLBACK_PROJECTS: Project[] = [
+          { id: 'fna1', name: 'FNA1', active: true },
+          { id: 'crane_gamer', name: 'Crane_Gamer', active: true },
+          { id: 'ego_vlm', name: 'Ego_VLM', active: true },
+          { id: 'duck', name: 'Duck', active: true },
+          { id: 'aloha_ots', name: 'Aloha_OTS', active: true },
+          { id: 'cobra', name: 'Cobra', active: true },
+        ];
+        const activeProjs = projects.length > 0 ? projects.filter((p) => p.active) : FALLBACK_PROJECTS;
         if (activeProjs.length > 0) {
           setProjectId(activeProjs[0].id);
         }
@@ -141,7 +149,15 @@ export function TaskEntryModal({
     }
   };
 
-  const activeProjects = projects.filter((p) => p.active);
+  const FALLBACK_PROJECTS: Project[] = [
+    { id: 'fna1', name: 'FNA1', active: true },
+    { id: 'crane_gamer', name: 'Crane_Gamer', active: true },
+    { id: 'ego_vlm', name: 'Ego_VLM', active: true },
+    { id: 'duck', name: 'Duck', active: true },
+    { id: 'aloha_ots', name: 'Aloha_OTS', active: true },
+    { id: 'cobra', name: 'Cobra', active: true },
+  ];
+  const activeProjects = projects.length > 0 ? projects.filter((p) => p.active) : FALLBACK_PROJECTS;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
