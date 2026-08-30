@@ -3,7 +3,7 @@ import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, pars
 /**
  * Calculates the logical work date for a given Date object based on a cutoff hour.
  * Default cutoff is 0 (12:00 AM midnight reset).
- * If cutoff is e.g. 4 (4:00 AM), any time between 00:00 and 03:59 belongs to the previous calendar day.
+ * If cutoff is e.g. 8 (8:00 AM), any time between 00:00 and 07:59 belongs to the previous calendar day.
  */
 export function getLogicalDate(dateInput: Date | string = new Date(), cutoffHour: number = 0): string {
   const date = typeof dateInput === 'string' ? parseISO(dateInput) : new Date(dateInput);
@@ -109,6 +109,7 @@ export function formatMinutesToDecimal(minutes: number): number {
 
 /**
  * Quick date range calculator using logical date conventions.
+ * Workweek starts on Tuesday (weekStartsOn: 2) and ends on Monday to match Remotasks pay cycle.
  */
 export function getDateRangePreset(
   preset: 'today' | 'this_week' | 'last_week' | 'this_month' | 'all',
@@ -121,8 +122,8 @@ export function getDateRangePreset(
     case 'today':
       return { startDate: todayLogicalStr, endDate: todayLogicalStr };
     case 'this_week': {
-      const start = startOfWeek(todayDate, { weekStartsOn: 1 }); // Monday
-      const end = endOfWeek(todayDate, { weekStartsOn: 1 }); // Sunday
+      const start = startOfWeek(todayDate, { weekStartsOn: 2 }); // Tuesday
+      const end = endOfWeek(todayDate, { weekStartsOn: 2 }); // Monday
       return {
         startDate: format(start, 'yyyy-MM-dd'),
         endDate: format(end, 'yyyy-MM-dd'),
@@ -130,8 +131,8 @@ export function getDateRangePreset(
     }
     case 'last_week': {
       const lastWeekDate = subDays(todayDate, 7);
-      const start = startOfWeek(lastWeekDate, { weekStartsOn: 1 });
-      const end = endOfWeek(lastWeekDate, { weekStartsOn: 1 });
+      const start = startOfWeek(lastWeekDate, { weekStartsOn: 2 }); // Tuesday
+      const end = endOfWeek(lastWeekDate, { weekStartsOn: 2 }); // Monday
       return {
         startDate: format(start, 'yyyy-MM-dd'),
         endDate: format(end, 'yyyy-MM-dd'),

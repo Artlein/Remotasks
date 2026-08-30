@@ -19,19 +19,19 @@ export async function GET() {
       orderBy: { date: 'desc' },
     });
 
-    // Group tasks by week start date (Monday)
+    // Group tasks by Remotasks workweek: Tuesday to Monday (weekStartsOn: 2)
     const weeklyMap: Record<string, { weekLabel: string; startDate: string; endDate: string; breakdown: Record<string, number>; totalMinutes: number; taskCount: number }> = {};
 
     for (const task of tasks) {
       const taskDate = parseISO(task.date);
       if (isNaN(taskDate.getTime())) continue;
 
-      const weekStart = startOfWeek(taskDate, { weekStartsOn: 1 }); // Monday
-      const weekEnd = endOfWeek(taskDate, { weekStartsOn: 1 }); // Sunday
+      const weekStart = startOfWeek(taskDate, { weekStartsOn: 2 }); // Tuesday
+      const weekEnd = endOfWeek(taskDate, { weekStartsOn: 2 }); // Monday
 
       const weekStartKey = format(weekStart, 'yyyy-MM-dd');
       const weekEndKey = format(weekEnd, 'yyyy-MM-dd');
-      const label = `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
+      const label = `${format(weekStart, 'EEE, MMM d')} - ${format(weekEnd, 'EEE, MMM d, yyyy')}`;
 
       if (!weeklyMap[weekStartKey]) {
         weeklyMap[weekStartKey] = {

@@ -20,6 +20,7 @@ import {
   Line,
 } from 'recharts';
 import { BarChart3, PieChart as PieIcon, LineChart as LineIcon, DollarSign, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { parseISO, startOfWeek, format } from 'date-fns';
 
 interface Project {
   id: string;
@@ -120,22 +121,26 @@ export function TrendCharts({ dailyRows, projects, targetHours, hourlyRate = 0 }
   const metTargetDays = dailyRows.filter((r) => r.totalHours >= targetHours).length;
   const bestDayEarnings = Math.max(...dailyRows.map((r) => r.totalHours * hourlyRate), 0);
 
-  // Weekly rollup earnings for bar chart
-  const weeklyEarningsMap: Record<string, number> = {};
+  // Weekly rollup earnings for bar chart (Tuesday - Monday Remotasks pay cycle)
+  const weeklyEarningsMap: Record<string, { label: string; earnings: number }> = {};
   chronoRows.forEach((row) => {
-    const d = new Date(row.date);
-    const day = d.getDay(); // 0=Sun
-    const diff = day === 0 ? -6 : 1 - day;
-    const monday = new Date(d);
-    monday.setDate(d.getDate() + diff);
-    const weekKey = monday.toISOString().slice(0, 10);
-    weeklyEarningsMap[weekKey] = (weeklyEarningsMap[weekKey] || 0) + row.totalHours * hourlyRate;
+    const taskDate = parseISO(row.date);
+    if (isNaN(taskDate.getTime())) return;
+    const weekStart = startOfWeek(taskDate, { weekStartsOn: 2 }); // Tuesday
+    const weekKey = format(weekStart, 'yyyy-MM-dd');
+    const label = `Tue ${format(weekStart, 'MM/dd')}`;
+    
+    if (!weeklyEarningsMap[weekKey]) {
+      weeklyEarningsMap[weekKey] = { label, earnings: 0 };
+    }
+    weeklyEarningsMap[weekKey].earnings += row.totalHours * hourlyRate;
   });
+
   const weeklyEarningsData = Object.entries(weeklyEarningsMap)
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([week, earnings]) => ({
-      week: `W ${week.slice(5)}`,
-      earnings: Math.round(earnings * 100) / 100,
+    .map(([_, item]) => ({
+      week: item.label,
+      earnings: Math.round(item.earnings * 100) / 100,
       target: Math.round(targetHours * 5 * hourlyRate * 100) / 100,
     }));
 

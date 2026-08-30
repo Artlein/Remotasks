@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { CalendarRange, CheckCircle2, AlertCircle, DollarSign } from 'lucide-react';
+import { CalendarRange, CheckCircle2, AlertCircle, DollarSign, Clock } from 'lucide-react';
 import { formatMinutesToDuration, formatMinutesToFriendly } from '@/lib/logical-day';
 
 interface Project {
@@ -39,15 +39,20 @@ export function WeeklySummaryTable({
 
   return (
     <div className="skeuo-panel p-6">
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6 pb-4 border-b border-slate-800">
         <div>
           <h2 className="text-base font-bold text-white flex items-center gap-2">
             <CalendarRange className="w-5 h-5 text-cyan-400" />
             Weekly Rollup Summary
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Grouped Monday to Sunday (Target: {weeklyTargetHours}h/week baseline)
+            Grouped Tuesday to Monday • Remotasks Pay Cycle (Target: {weeklyTargetHours}h/week baseline)
           </p>
+        </div>
+
+        <div className="flex items-center gap-1.5 text-[11px] text-slate-400 bg-slate-950/70 px-3 py-1.5 rounded-xl border border-slate-800 font-mono">
+          <Clock className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Pay Cycle: Tue 8:00 AM – Tue 7:59 AM</span>
         </div>
       </div>
 
@@ -55,7 +60,7 @@ export function WeeklySummaryTable({
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-slate-800 bg-slate-900/60 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              <th className="py-4 px-4">Week Period</th>
+              <th className="py-4 px-4">Pay Period (Tue - Mon)</th>
               {activeProjects.map((p) => (
                 <th key={p.id} className="py-4 px-4 text-center">
                   {p.name}
