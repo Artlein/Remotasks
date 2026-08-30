@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { HeaderBanner } from '@/components/HeaderBanner';
 import { TaskLogTable, TaskItem } from '@/components/TaskLogTable';
 import { DailySummaryTable } from '@/components/DailySummaryTable';
@@ -10,7 +10,19 @@ import { TaskEntryModal } from '@/components/TaskEntryModal';
 import { ProjectManagerModal } from '@/components/ProjectManagerModal';
 import { ImportExportModal } from '@/components/ImportExportModal';
 import { SettingsModal } from '@/components/SettingsModal';
-import { getLogicalDate, getDateRangePreset } from '@/lib/logical-day';
+import { getLogicalDate } from '@/lib/logical-day';
+import {
+  DEFAULT_PROJECTS,
+  DEFAULT_SETTINGS,
+  loadStoredTasks,
+  saveStoredTasks,
+  loadStoredProjects,
+  saveStoredProjects,
+  loadStoredSettings,
+  saveStoredSettings,
+  computeDailyRollup,
+  computeWeeklyRollup,
+} from '@/lib/client-sync';
 import { FileText, Calendar, CalendarRange, BarChart2, Plus } from 'lucide-react';
 import { subDays } from 'date-fns';
 
@@ -24,15 +36,13 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<'log' | 'daily' | 'weekly' | 'analytics'>('log');
 
   // Settings State
-  const [cutoffHour, setCutoffHour] = useState<number>(0);
-  const [dailyTargetHours, setDailyTargetHours] = useState<number>(8.0);
-  const [hourlyRate, setHourlyRate] = useState<number>(0.0);
+  const [cutoffHour, setCutoffHour] = useState<number>(DEFAULT_SETTINGS.logicalCutoffHour);
+  const [dailyTargetHours, setDailyTargetHours] = useState<number>(DEFAULT_SETTINGS.dailyTargetHours);
+  const [hourlyRate, setHourlyRate] = useState<number>(DEFAULT_SETTINGS.hourlyRate);
 
   // Data State
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<Project[]>(DEFAULT_PROJECTS);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
-  const [dailyRows, setDailyRows] = useState<any[]>([]);
-  const [weeklyRows, setWeeklyRows] = useState<any[]>([]);
 
   // Selected Date State for Header & Task Log Quick Nav
   const [selectedDateStr, setSelectedDateStr] = useState<string>('');
@@ -54,35 +64,67 @@ export default function DashboardPage() {
   const [isImportExportModalOpen, setIsImportExportModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
-  // Load Settings
+  // Hydrate from LocalStorage on mount so data is 100% instant and survives refresh
+  useEffect(() => {
+    const storedSettings = loadStoredSettings();
+    if (storedSettings) {
+      setCutoffHour(storedSettings.logicalCutoffHour ?? 0);
+      setDailyTargetHours(storedSettings.dailyTargetHours ?? 8.0);
+      setHourlyRate(storedSettings.hourlyRate ?? 0.0);
+    }
+
+    const storedProjects = loadStoredProjects();
+    if (storedProjects && storedProjects.length > 0) {
+      setProjects(storedProjects);
+    }
+
+    const storedTasks = loadStoredTasks();
+    if (storedTasks && storedTasks.length > 0) {
+      setTasks(storedTasks);
+    }
+  }, []);
+
+  // Load Settings from API in background
   const fetchSettings = useCallback(async () => {
     try {
       const res = await fetch('/api/settings');
       if (res.ok) {
         const data = await res.json();
-        setCutoffHour(data.logicalCutoffHour ?? 0);
-        setDailyTargetHours(data.dailyTargetHours ?? 8.0);
-        setHourlyRate(data.hourlyRate ?? 0.0);
+        const newCutoff = data.logicalCutoffHour ?? 0;
+        const newTarget = data.dailyTargetHours ?? 8.0;
+        const newRate = data.hourlyRate ?? 0.0;
+        setCutoffHour(newCutoff);
+        setDailyTargetHours(newTarget);
+        setHourlyRate(newRate);
+        saveStoredSettings({
+          id: 'default',
+          logicalCutoffHour: newCutoff,
+          dailyTargetHours: newTarget,
+          hourlyRate: newRate,
+        });
       }
     } catch (e) {
       console.error('Error fetching settings:', e);
     }
   }, []);
 
-  // Load Projects
+  // Load Projects from API in background
   const fetchProjects = useCallback(async () => {
     try {
       const res = await fetch('/api/projects?all=true');
       if (res.ok) {
         const data = await res.json();
-        setProjects(data);
+        if (Array.isArray(data) && data.length > 0) {
+          setProjects(data);
+          saveStoredProjects(data);
+        }
       }
     } catch (e) {
       console.error('Error fetching projects:', e);
     }
   }, []);
 
-  // Load Task Log
+  // Load Task Log from API in background
   const fetchTasks = useCallback(async () => {
     try {
       const params = new URLSearchParams();
@@ -95,43 +137,31 @@ export default function DashboardPage() {
       const res = await fetch(`/api/tasks?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
-        setTasks(data);
+        if (Array.isArray(data)) {
+          // If query parameters are active, only update filtered view
+          const hasFilters = startDate || endDate || selectedProjectId !== 'ALL' || selectedStatus !== 'ALL' || searchQuery;
+          if (!hasFilters) {
+            setTasks((prev) => {
+              // Merge stored and server tasks without losing client-side additions
+              if (data.length === 0 && prev.length > 0) {
+                return prev; // keep local tasks if server is cold-restarted
+              }
+              const mergedMap = new Map<string, TaskItem>();
+              prev.forEach((t) => mergedMap.set(t.id, t));
+              data.forEach((t: TaskItem) => mergedMap.set(t.id, t));
+              const merged = Array.from(mergedMap.values()).sort((a, b) => b.date.localeCompare(a.date));
+              saveStoredTasks(merged);
+              return merged;
+            });
+          } else {
+            setTasks(data);
+          }
+        }
       }
     } catch (e) {
       console.error('Error fetching tasks:', e);
     }
   }, [startDate, endDate, selectedProjectId, selectedStatus, searchQuery]);
-
-  // Load Daily Summary
-  const fetchDailySummary = useCallback(async () => {
-    try {
-      const { startDate: pStart, endDate: pEnd } = getDateRangePreset(dailyPreset, cutoffHour);
-      const params = new URLSearchParams();
-      if (pStart) params.append('startDate', pStart);
-      if (pEnd) params.append('endDate', pEnd);
-
-      const res = await fetch(`/api/summary/daily?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setDailyRows(data.rows || []);
-      }
-    } catch (e) {
-      console.error('Error fetching daily summary:', e);
-    }
-  }, [dailyPreset, cutoffHour]);
-
-  // Load Weekly Summary
-  const fetchWeeklySummary = useCallback(async () => {
-    try {
-      const res = await fetch('/api/summary/weekly');
-      if (res.ok) {
-        const data = await res.json();
-        setWeeklyRows(data.rows || []);
-      }
-    } catch (e) {
-      console.error('Error fetching weekly summary:', e);
-    }
-  }, []);
 
   // Initial Setup & Default Date Selection
   useEffect(() => {
@@ -145,13 +175,14 @@ export default function DashboardPage() {
     fetchTasks();
   }, [fetchTasks]);
 
-  useEffect(() => {
-    fetchDailySummary();
-  }, [fetchDailySummary]);
+  // Dynamic Daily and Weekly Rollup calculations directly from tasks state
+  const dailyRows = useMemo(() => {
+    return computeDailyRollup(tasks, dailyTargetHours, dailyPreset, cutoffHour);
+  }, [tasks, dailyTargetHours, dailyPreset, cutoffHour]);
 
-  useEffect(() => {
-    fetchWeeklySummary();
-  }, [fetchWeeklySummary]);
+  const weeklyRows = useMemo(() => {
+    return computeWeeklyRollup(tasks, dailyTargetHours * 5);
+  }, [tasks, dailyTargetHours]);
 
   // Keyboard Shortcuts Handler (Cmd+K / Ctrl+K / N -> open Task Entry)
   useEffect(() => {
@@ -181,18 +212,21 @@ export default function DashboardPage() {
 
   const handleRefreshAll = () => {
     fetchTasks();
-    fetchDailySummary();
-    fetchWeeklySummary();
     fetchProjects();
   };
 
   const handleDeleteTask = async (taskId: string) => {
     if (!confirm('Are you sure you want to delete this task entry?')) return;
+    
+    // Immediately delete from client state & local storage
+    setTasks((prev) => {
+      const updated = prev.filter((t) => t.id !== taskId);
+      saveStoredTasks(updated);
+      return updated;
+    });
+
     try {
-      const res = await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
-      if (res.ok) {
-        handleRefreshAll();
-      }
+      await fetch(`/api/tasks/${taskId}`, { method: 'DELETE' });
     } catch (e) {
       console.error('Error deleting task:', e);
     }
