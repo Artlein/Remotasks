@@ -10,6 +10,7 @@ import { TaskEntryModal } from '@/components/TaskEntryModal';
 import { ProjectManagerModal } from '@/components/ProjectManagerModal';
 import { ImportExportModal } from '@/components/ImportExportModal';
 import { SettingsModal } from '@/components/SettingsModal';
+import { SmartReminder } from '@/components/SmartReminder';
 import { getLogicalDate } from '@/lib/logical-day';
 import {
   DEFAULT_PROJECTS,
@@ -271,6 +272,7 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      <SmartReminder tasks={tasks} cutoffHour={cutoffHour} />
       {/* Header Banner */}
       <HeaderBanner
         todayDateStr={todayLogicalStr}
