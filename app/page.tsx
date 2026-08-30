@@ -355,6 +355,7 @@ export default function DashboardPage() {
             dailyRows={dailyRows}
             projects={projects}
             targetHours={dailyTargetHours}
+            hourlyRate={hourlyRate}
           />
         )}
       </main>
