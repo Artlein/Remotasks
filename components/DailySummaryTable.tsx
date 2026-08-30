@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Calendar, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Calendar, CheckCircle, AlertTriangle, DollarSign } from 'lucide-react';
 import { formatMinutesToDuration } from '@/lib/logical-day';
 
 interface Project {
@@ -24,6 +24,7 @@ interface DailySummaryTableProps {
   rows: DailyRow[];
   projects: Project[];
   targetHours: number;
+  hourlyRate?: number;
   onSelectPreset: (preset: 'this_week' | 'last_week' | 'this_month' | 'all') => void;
   activePreset: string;
 }
@@ -32,6 +33,7 @@ export function DailySummaryTable({
   rows,
   projects,
   targetHours,
+  hourlyRate = 0,
   onSelectPreset,
   activePreset,
 }: DailySummaryTableProps) {
@@ -86,6 +88,7 @@ export function DailySummaryTable({
                 </th>
               ))}
               <th className="py-4 px-4 text-right">Daily Total</th>
+              {hourlyRate > 0 && <th className="py-4 px-4 text-right">Est. Earnings</th>}
               <th className="py-4 px-4 text-right">Target Diff ({targetHours}h)</th>
             </tr>
           </thead>
@@ -93,7 +96,7 @@ export function DailySummaryTable({
             {rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={activeProjects.length + 3}
+                  colSpan={activeProjects.length + (hourlyRate > 0 ? 4 : 3)}
                   className="py-12 text-center text-slate-500 font-sans"
                 >
                   No daily totals found for selected range.
@@ -105,6 +108,7 @@ export function DailySummaryTable({
                 const diffLabel = row.targetDiffHours > 0
                   ? `+${row.targetDiffHours.toFixed(2)}h`
                   : `${row.targetDiffHours.toFixed(2)}h`;
+                const earnings = (row.totalHours * hourlyRate).toFixed(2);
 
                 return (
                   <tr
@@ -137,6 +141,11 @@ export function DailySummaryTable({
                         ({row.totalHours.toFixed(2)}h)
                       </span>
                     </td>
+                    {hourlyRate > 0 && (
+                      <td className="py-4 px-4 text-right font-bold text-emerald-400 whitespace-nowrap">
+                        ${earnings}
+                      </td>
+                    )}
                     <td className="py-4 px-4 text-right whitespace-nowrap">
                       <span
                         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold ${

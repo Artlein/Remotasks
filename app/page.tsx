@@ -335,6 +335,7 @@ export default function DashboardPage() {
             rows={dailyRows}
             projects={projects}
             targetHours={dailyTargetHours}
+            hourlyRate={hourlyRate}
             activePreset={dailyPreset}
             onSelectPreset={(preset) => setDailyPreset(preset)}
           />
@@ -345,6 +346,7 @@ export default function DashboardPage() {
             rows={weeklyRows}
             projects={projects}
             weeklyTargetHours={dailyTargetHours * 5}
+            hourlyRate={hourlyRate}
           />
         )}
 

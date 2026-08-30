@@ -45,7 +45,7 @@ export function HeaderBanner({
   const remainingMinutes = Math.max(0, targetMinutes - todayMinutes);
   const isViewingToday = selectedDateStr === todayDateStr;
 
-  const estimatedEarnings = hourlyRate > 0 ? (todayHours * hourlyRate).toFixed(2) : null;
+  const estimatedEarnings = (todayHours * hourlyRate).toFixed(2);
 
   const handlePrevDay = () => {
     const d = parseISO(selectedDateStr);
@@ -67,7 +67,7 @@ export function HeaderBanner({
 
   return (
     <div className="space-y-6 mb-8">
-      {/* 1. Top Navigation Bar with Prominent App Logo */}
+      {/* 1. Top Navigation Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-800/90">
         <div className="flex items-center gap-4">
           <div className="relative w-12 h-12 rounded-2xl overflow-hidden shadow-xl shadow-blue-500/25 border-2 border-blue-400/30 shrink-0">
@@ -127,7 +127,7 @@ export function HeaderBanner({
           <button
             onClick={onOpenSettingsModal}
             className="skeuo-button-secondary p-2.5 text-slate-300"
-            title="Workday Settings"
+            title="Workday & Rate Settings"
           >
             <Settings className="w-4 h-4" />
           </button>
@@ -136,7 +136,7 @@ export function HeaderBanner({
 
       {/* 2. Balanced 2-Column Hero Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Card A: Target Progress & Date Picker */}
+        {/* Card A: Target Progress, Date Picker & Earnings Badge */}
         <div className="skeuo-panel p-6 relative">
           <div className="flex items-center justify-between mb-4">
             {/* Workday Date Selector */}
@@ -183,7 +183,7 @@ export function HeaderBanner({
             </span>
           </div>
 
-          {/* Today's Hours & Target Stat */}
+          {/* Today's Hours & Target Stat + EARNINGS BADGE */}
           <div className="skeuo-screen p-5 mb-1">
             <div className="flex items-center justify-between text-xs font-bold text-slate-300 mb-2">
               <span className="flex items-center gap-1.5 text-slate-200 tracking-wider">
@@ -201,28 +201,30 @@ export function HeaderBanner({
               </span>
             </div>
 
-            <div className="flex items-baseline justify-between mb-3">
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-black text-white font-mono tracking-tight">
                   {formatMinutesToFriendly(todayMinutes)}
                 </span>
                 <span className="text-sm text-slate-400 font-mono">
-                  ({todayHours.toFixed(2)} hours)
+                  ({todayHours.toFixed(2)} hrs)
                 </span>
               </div>
 
-              {estimatedEarnings ? (
-                <div className="text-right">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Est. Earnings</span>
-                  <span className="text-base font-black text-emerald-400 font-mono flex items-center gap-0.5 justify-end">
-                    <DollarSign className="w-4 h-4" />{estimatedEarnings}
-                  </span>
-                </div>
-              ) : (
-                <span className="text-xs text-slate-400 font-semibold">
-                  Goal: <strong className="text-slate-200">{dailyTargetHours}h</strong>
+              {/* EARNINGS DISPLAY BADGE */}
+              <div
+                onClick={onOpenSettingsModal}
+                className="text-right cursor-pointer group bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 px-3 py-1.5 rounded-xl transition"
+                title="Click gear icon or click here to set your $/hr rate"
+              >
+                <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">
+                  Est. Earnings {hourlyRate > 0 ? `($${hourlyRate}/hr)` : '(Set Rate)'}
                 </span>
-              )}
+                <span className="text-base font-black text-emerald-300 font-mono flex items-center gap-0.5 justify-end">
+                  <DollarSign className="w-4 h-4 text-emerald-400" />
+                  {estimatedEarnings}
+                </span>
+              </div>
             </div>
 
             {/* Analog Gauge Bar */}
@@ -242,7 +244,7 @@ export function HeaderBanner({
               <span>2h</span>
               <span>4h</span>
               <span>6h</span>
-              <span className="text-blue-400 font-bold">8h</span>
+              <span className="text-blue-400 font-bold">8h Goal</span>
               <span>10h+</span>
             </div>
           </div>

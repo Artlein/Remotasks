@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { CalendarRange, CheckCircle2, AlertCircle } from 'lucide-react';
+import { CalendarRange, CheckCircle2, AlertCircle, DollarSign } from 'lucide-react';
 import { formatMinutesToDuration, formatMinutesToFriendly } from '@/lib/logical-day';
 
 interface Project {
@@ -26,12 +26,14 @@ interface WeeklySummaryTableProps {
   rows: WeeklyRow[];
   projects: Project[];
   weeklyTargetHours: number;
+  hourlyRate?: number;
 }
 
 export function WeeklySummaryTable({
   rows,
   projects,
   weeklyTargetHours,
+  hourlyRate = 0,
 }: WeeklySummaryTableProps) {
   const activeProjects = projects.filter((p) => p.active);
 
@@ -60,6 +62,7 @@ export function WeeklySummaryTable({
                 </th>
               ))}
               <th className="py-4 px-4 text-right">Weekly Total</th>
+              {hourlyRate > 0 && <th className="py-4 px-4 text-right">Est. Weekly Earnings</th>}
               <th className="py-4 px-4 text-right">Target Status</th>
             </tr>
           </thead>
@@ -67,7 +70,7 @@ export function WeeklySummaryTable({
             {rows.length === 0 ? (
               <tr>
                 <td
-                  colSpan={activeProjects.length + 3}
+                  colSpan={activeProjects.length + (hourlyRate > 0 ? 4 : 3)}
                   className="py-12 text-center text-slate-500 font-sans"
                 >
                   No weekly historical data recorded yet.
@@ -78,6 +81,7 @@ export function WeeklySummaryTable({
                 const isMet = row.totalHours >= weeklyTargetHours;
                 const diffHours = Math.round((row.totalHours - weeklyTargetHours) * 100) / 100;
                 const diffLabel = diffHours >= 0 ? `+${diffHours}h` : `${diffHours}h`;
+                const earnings = (row.totalHours * hourlyRate).toFixed(2);
 
                 return (
                   <tr
@@ -113,6 +117,11 @@ export function WeeklySummaryTable({
                         ({row.totalHours.toFixed(2)}h)
                       </span>
                     </td>
+                    {hourlyRate > 0 && (
+                      <td className="py-4 px-4 text-right font-bold text-emerald-400 whitespace-nowrap">
+                        ${earnings}
+                      </td>
+                    )}
                     <td className="py-4 px-4 text-right whitespace-nowrap font-sans">
                       <span
                         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold ${
