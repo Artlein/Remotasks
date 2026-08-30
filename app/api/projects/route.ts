@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { db, seedInitialDataIfNeeded, DEFAULT_PROJECT_NAMES } from '@/lib/db';
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   try {
     await seedInitialDataIfNeeded();
