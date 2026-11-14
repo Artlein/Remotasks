@@ -204,6 +204,14 @@ export default function DashboardPage() {
     fetchTasks();
   }, [fetchTasks]);
 
+  // Periodic warm-up ping to keep Supabase pooler connections warm and avoid cold-start lag
+  useEffect(() => {
+    const keepWarmInterval = setInterval(() => {
+      fetch('/api/ping').catch(() => {});
+    }, 4 * 60 * 1000); // every 4 minutes
+    return () => clearInterval(keepWarmInterval);
+  }, []);
+
   // Dynamic Daily and Weekly Rollup calculations directly from tasks state
   const dailyRows = useMemo(() => {
     return computeDailyRollup(tasks, dailyTargetHours, dailyPreset, cutoffHour);

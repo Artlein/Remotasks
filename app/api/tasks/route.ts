@@ -93,46 +93,54 @@ export async function POST(request: Request) {
 
     let taskDate = date;
     if (!taskDate) {
-      const settings = await withRetry(() =>
-        db.userSettings.findUnique({ where: { userId: user.id } })
-      );
-      const cutoff = settings?.logicalCutoffHour ?? 0;
-      taskDate = getLogicalDate(new Date(), cutoff);
+      taskDate = getLogicalDate(new Date(), 0);
     }
 
-    // Validate project belongs to this user
-    let validProjectId = projectId;
-    const projectExists = await withRetry(() =>
-      db.project.findFirst({ where: { id: validProjectId, userId: user.id } })
-    );
-    if (!projectExists) {
-      const fallback = await withRetry(() =>
-        db.project.findFirst({ where: { userId: user.id, active: true } })
+    let newTask;
+    try {
+      newTask = await withRetry(() =>
+        db.task.create({
+          data: {
+            date: taskDate,
+            projectId,
+            userId: user.id,
+            description: description.trim(),
+            durationMinutes: computedMinutes,
+            status: status || 'Done',
+            notes: notes ? notes.trim() : null,
+          },
+          include: { project: true },
+        })
       );
-      if (fallback) {
-        validProjectId = fallback.id;
-      } else {
-        const created = await withRetry(() =>
-          db.project.create({ data: { name: 'FNA1', active: true, userId: user.id } })
+    } catch (createErr: any) {
+      // If foreign key constraint failed (e.g. invalid project ID), resolve project fallback
+      if (createErr?.code === 'P2003' || createErr?.message?.includes('Foreign key')) {
+        let fallback = await withRetry(() =>
+          db.project.findFirst({ where: { userId: user.id, active: true } })
         );
-        validProjectId = created.id;
+        if (!fallback) {
+          fallback = await withRetry(() =>
+            db.project.create({ data: { name: 'FNA1', active: true, userId: user.id } })
+          );
+        }
+        newTask = await withRetry(() =>
+          db.task.create({
+            data: {
+              date: taskDate,
+              projectId: fallback.id,
+              userId: user.id,
+              description: description.trim(),
+              durationMinutes: computedMinutes,
+              status: status || 'Done',
+              notes: notes ? notes.trim() : null,
+            },
+            include: { project: true },
+          })
+        );
+      } else {
+        throw createErr;
       }
     }
-
-    const newTask = await withRetry(() =>
-      db.task.create({
-        data: {
-          date: taskDate,
-          projectId: validProjectId,
-          userId: user.id,
-          description: description.trim(),
-          durationMinutes: computedMinutes,
-          status: status || 'Done',
-          notes: notes ? notes.trim() : null,
-        },
-        include: { project: true },
-      })
-    );
 
     return NextResponse.json(newTask, { status: 201 });
   } catch (error: any) {

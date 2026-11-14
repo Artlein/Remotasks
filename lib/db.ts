@@ -80,10 +80,14 @@ export async function withRetry<T>(
   throw lastError;
 }
 
+const seededUsersCache = new Set<string>();
+
 /**
  * Ensures initial default projects and settings are present for a given user.
+ * Cached in-memory to prevent running redundant DB queries on every single request.
  */
 export async function seedUserDataIfNeeded(userId: string) {
+  if (seededUsersCache.has(userId)) return;
   try {
     // Seed default settings if missing
     const existingSettings = await withRetry(() =>
@@ -112,6 +116,7 @@ export async function seedUserDataIfNeeded(userId: string) {
         );
       }
     }
+    seededUsersCache.add(userId);
   } catch (error) {
     console.error('Error during user auto-seeding:', error);
   }

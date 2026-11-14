@@ -118,6 +118,8 @@ export function TaskLogTable({
       return;
     }
 
+    const descriptionToSubmit = fastDescription.trim();
+    setFastDescription('');
     setIsFastSubmitting(true);
 
     try {
@@ -127,7 +129,7 @@ export function TaskLogTable({
         body: JSON.stringify({
           date: selectedDateStr || getLogicalDate(new Date(), cutoffHour),
           projectId: fastProjectId,
-          description: fastDescription.trim(),
+          description: descriptionToSubmit,
           durationStr: fastDurationStr,
           durationMinutes: minutes,
           status: fastStatus,
@@ -139,9 +141,9 @@ export function TaskLogTable({
         throw new Error(data.error || 'Failed to add task');
       }
 
-      setFastDescription('');
       onTaskCreatedOrUpdated();
     } catch (err: any) {
+      setFastDescription(descriptionToSubmit);
       setFastError(err.message || 'Error logging task');
     } finally {
       setIsFastSubmitting(false);
