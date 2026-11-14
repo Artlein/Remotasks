@@ -32,9 +32,11 @@ export async function POST(request: Request) {
 
     let synced = 0;
     for (const task of tasks) {
-      if (!task.description || !task.durationMinutes) continue;
+      const durationMinutes = Math.round(Number(task.durationMinutes) || 0);
+      if (durationMinutes <= 0 || !task.date) continue;
 
-      const projName = task.project?.name || 'FNA1';
+      const description = (task.description && String(task.description).trim()) || 'Audit Task';
+      const projName = task.project?.name || 'Aloha_OTS';
       let projectId = projectMap.get(projName.toLowerCase());
 
       if (!projectId) {
@@ -53,8 +55,8 @@ export async function POST(request: Request) {
             { id: task.id },
             {
               date: task.date,
-              description: task.description,
-              durationMinutes: Number(task.durationMinutes),
+              description: description,
+              durationMinutes: durationMinutes,
             },
           ],
         },
@@ -66,8 +68,8 @@ export async function POST(request: Request) {
             date: task.date,
             projectId,
             userId: user.id,
-            description: task.description,
-            durationMinutes: Number(task.durationMinutes),
+            description: description,
+            durationMinutes: durationMinutes,
             status: task.status || 'Done',
             notes: task.notes || null,
           },

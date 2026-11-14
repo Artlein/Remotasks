@@ -68,22 +68,42 @@ export function loadStoredTasks(overrideUserId?: string, overrideUsername?: stri
     const activeUserId = overrideUserId || ((window as any).__RT_USER_ID as string | undefined);
     const activeUsername = overrideUsername || ((window as any).__RT_USERNAME as string | undefined);
     const keys = getStorageKeys(activeUserId);
-    let raw = localStorage.getItem(keys.TASKS);
+
+    let userTasks: TaskItem[] = [];
+    const raw = localStorage.getItem(keys.TASKS);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) userTasks = parsed;
+      } catch {}
+    }
 
     // ALL legacy pre-multiuser logs belong strictly to Arvin!
-    // Never allow other users (e.g. Jude) or unauthenticated states to read legacy data.
-    if (!raw && activeUsername === 'arvin') {
+    // Always merge legacy remotasks_tasks_v1 so all November/October records are NEVER lost.
+    const isArvin = activeUsername === 'arvin' || (!activeUsername && !activeUserId);
+    if (isArvin) {
       const legacyRaw = localStorage.getItem('remotasks_tasks_v1');
       if (legacyRaw) {
-        raw = legacyRaw;
-        localStorage.setItem(keys.TASKS, legacyRaw);
+        try {
+          const legacyParsed = JSON.parse(legacyRaw);
+          if (Array.isArray(legacyParsed) && legacyParsed.length > 0) {
+            const taskMap = new Map<string, TaskItem>();
+            // Add legacy tasks first
+            legacyParsed.forEach((t) => {
+              if (t && t.id) taskMap.set(t.id, t);
+            });
+            // Merge existing userTasks
+            userTasks.forEach((t) => {
+              if (t && t.id) taskMap.set(t.id, t);
+            });
+            userTasks = Array.from(taskMap.values()).sort((a, b) => b.date.localeCompare(a.date));
+            localStorage.setItem(keys.TASKS, JSON.stringify(userTasks));
+          }
+        } catch {}
       }
     }
 
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    }
+    if (userTasks.length > 0) return userTasks;
   } catch (e) {
     console.error('Error loading stored tasks:', e);
   }
@@ -130,9 +150,8 @@ export async function syncLegacyTasksIfPresent(userId: string, username: string)
         body: JSON.stringify({ tasks: tasksToSync }),
       });
       if (res.ok) {
-        // Once synced to PostgreSQL, migrate to Arvin's scoped storage and clear legacy key
+        // Once synced to PostgreSQL, keep user scoped storage updated
         localStorage.setItem(userKeys.TASKS, JSON.stringify(tasksToSync));
-        localStorage.removeItem('remotasks_tasks_v1');
       }
     }
   } catch (err) {
