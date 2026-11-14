@@ -65,7 +65,18 @@ function STORAGE_KEYS() {
 export function loadStoredTasks(): TaskItem[] | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS().TASKS);
+    const keys = STORAGE_KEYS();
+    let raw = localStorage.getItem(keys.TASKS);
+
+    // If no user-scoped tasks exist yet, migrate from legacy un-namespaced key
+    if (!raw) {
+      const legacyRaw = localStorage.getItem('remotasks_tasks_v1');
+      if (legacyRaw) {
+        raw = legacyRaw;
+        localStorage.setItem(keys.TASKS, legacyRaw);
+      }
+    }
+
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed;
