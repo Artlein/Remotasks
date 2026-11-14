@@ -3,14 +3,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { ShieldCheck, Lock, ArrowLeft, Loader2, KeyRound, Delete } from 'lucide-react';
+import { ShieldCheck, Lock, ArrowLeft, Loader2, KeyRound, Delete, Sparkles, CheckCircle2 } from 'lucide-react';
 
 interface Profile {
   id: string;
   name: string;
   role: string;
   avatar: string;
-  accentColor: string;
   glowColor: string;
 }
 
@@ -20,7 +19,6 @@ const PROFILES: Profile[] = [
     name: 'Arvin',
     role: 'EQC Lead Auditor',
     avatar: '/avatars/arvin.svg',
-    accentColor: 'from-blue-600 to-indigo-600',
     glowColor: 'shadow-blue-500/20 border-blue-500/40 hover:border-blue-400',
   },
   {
@@ -28,7 +26,6 @@ const PROFILES: Profile[] = [
     name: 'Jude',
     role: 'EQC Quality Auditor',
     avatar: '/avatars/jude.svg',
-    accentColor: 'from-purple-600 to-violet-600',
     glowColor: 'shadow-purple-500/20 border-purple-500/40 hover:border-purple-400',
   },
 ];
@@ -36,31 +33,77 @@ const PROFILES: Profile[] = [
 export default function LoginPage() {
   const router = useRouter();
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
+  const [isFirstLogin, setIsFirstLogin] = useState<boolean>(false);
+  const [checkingStatus, setCheckingStatus] = useState<boolean>(false);
+
+  // PIN Setup Steps: 'enter' (for returning user) | 'create' | 'confirm' (for first-time user)
+  const [step, setStep] = useState<'enter' | 'create' | 'confirm'>('enter');
+  const [firstPin, setFirstPin] = useState<string>('');
   const [pin, setPin] = useState<string>('');
+
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [shake, setShake] = useState<boolean>(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Focus input when user is selected
+  // When profile is clicked, check if user already has a PIN
+  const handleSelectUser = async (profile: Profile) => {
+    setSelectedUser(profile);
+    setCheckingStatus(true);
+    setPin('');
+    setFirstPin('');
+    setError('');
+
+    try {
+      const res = await fetch(`/api/auth/check?username=${profile.id}`);
+      const data = await res.json();
+
+      if (data.isFirstLogin || !data.hasPin) {
+        setIsFirstLogin(true);
+        setStep('create');
+      } else {
+        setIsFirstLogin(false);
+        setStep('enter');
+      }
+    } catch {
+      // Default to create if cannot determine
+      setIsFirstLogin(true);
+      setStep('create');
+    } finally {
+      setCheckingStatus(false);
+      setTimeout(() => inputRef.current?.focus(), 150);
+    }
+  };
+
+  // Auto-handle when 6 digits are typed
   useEffect(() => {
-    if (selectedUser) {
+    if (!selectedUser || pin.length !== 6 || loading) return;
+
+    if (step === 'create') {
+      // First step of PIN creation: store initial PIN and move to confirmation
+      setFirstPin(pin);
       setPin('');
-      setError('');
-      setTimeout(() => inputRef.current?.focus(), 100);
+      setStep('confirm');
+    } else if (step === 'confirm') {
+      // Second step: check if confirmed PIN matches first PIN
+      if (pin === firstPin) {
+        handleFinalSubmit(pin);
+      } else {
+        setError('PINs do not match. Please choose again.');
+        triggerShake();
+        setPin('');
+        setFirstPin('');
+        setStep('create');
+      }
+    } else if (step === 'enter') {
+      // Regular login
+      handleFinalSubmit(pin);
     }
-  }, [selectedUser]);
+  }, [pin, step, firstPin, selectedUser, loading]);
 
-  // Auto-submit when 6 digits are typed
+  // Handle global keyboard typing
   useEffect(() => {
-    if (selectedUser && pin.length === 6 && !loading) {
-      handleSubmitPin(pin);
-    }
-  }, [pin, selectedUser]);
-
-  // Handle global keyboard typing when a user is selected
-  useEffect(() => {
-    if (!selectedUser) return;
+    if (!selectedUser || checkingStatus) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (loading) return;
@@ -74,20 +117,16 @@ export default function LoginPage() {
         setPin((prev) => prev.slice(0, -1));
         setError('');
       } else if (e.key === 'Escape') {
-        handleBackToProfiles();
+        handleBack();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedUser, pin, loading]);
+  }, [selectedUser, pin, loading, checkingStatus, step]);
 
-  const handleSubmitPin = async (pinToSubmit: string) => {
+  const handleFinalSubmit = async (pinToSubmit: string) => {
     if (!selectedUser) return;
-    if (pinToSubmit.length !== 6) {
-      setError('Please enter a 6-digit PIN');
-      return;
-    }
 
     setLoading(true);
     setError('');
@@ -105,14 +144,13 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok) {
-        // Store current user ID globally for client-side storage keys
         if (typeof window !== 'undefined' && data.userId) {
           (window as any).__RT_USER_ID = data.userId;
         }
         router.push('/');
         router.refresh();
       } else {
-        setError(data.error || 'Incorrect PIN. Try default: 123456');
+        setError(data.error || 'Incorrect PIN. Please try again.');
         triggerShake();
         setPin('');
       }
@@ -142,10 +180,18 @@ export default function LoginPage() {
     setError('');
   };
 
-  const handleBackToProfiles = () => {
-    setSelectedUser(null);
-    setPin('');
-    setError('');
+  const handleBack = () => {
+    if (step === 'confirm') {
+      setStep('create');
+      setPin('');
+      setFirstPin('');
+      setError('');
+    } else {
+      setSelectedUser(null);
+      setPin('');
+      setFirstPin('');
+      setError('');
+    }
   };
 
   return (
@@ -154,7 +200,7 @@ export default function LoginPage() {
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 left-1/3 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Main Console Box */}
+      {/* Main Container */}
       <div className="w-full max-w-md z-10 space-y-8">
         {/* Header Branding */}
         <div className="flex flex-col items-center gap-3 text-center">
@@ -194,10 +240,9 @@ export default function LoginPage() {
               {PROFILES.map((profile) => (
                 <button
                   key={profile.id}
-                  onClick={() => setSelectedUser(profile)}
+                  onClick={() => handleSelectUser(profile)}
                   className={`group relative flex flex-col items-center p-6 rounded-2xl bg-slate-900/90 border ${profile.glowColor} transition-all duration-200 hover:scale-[1.03] hover:shadow-xl active:scale-[0.98] text-center cursor-pointer`}
                 >
-                  {/* Avatar Container with pulse ring */}
                   <div className="relative w-24 h-24 mb-4 rounded-full p-1 bg-gradient-to-tr from-slate-800 to-slate-700 shadow-lg group-hover:shadow-blue-500/30 transition-all">
                     <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-slate-700/80 group-hover:border-white/50 transition">
                       <Image
@@ -210,7 +255,6 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  {/* Profile Info */}
                   <h3 className="text-lg font-bold text-white group-hover:text-blue-400 transition-colors">
                     {profile.name}
                   </h3>
@@ -218,7 +262,6 @@ export default function LoginPage() {
                     {profile.role}
                   </span>
 
-                  {/* Lock Indicator */}
                   <div className="mt-3.5 flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-950/80 border border-slate-800 text-[10px] text-slate-400 group-hover:text-slate-200 group-hover:border-slate-700 transition">
                     <Lock className="w-3 h-3 text-slate-500 group-hover:text-blue-400" />
                     <span>6-Digit PIN</span>
@@ -229,31 +272,37 @@ export default function LoginPage() {
 
             <div className="pt-2 text-center">
               <span className="text-[11px] text-slate-500">
-                Data, tasks, and settings are 100% private per user.
+                First login will let you set your 6-digit PIN password.
               </span>
             </div>
           </div>
         ) : (
-          /* View 2: 6-Digit PIN Entry */
+          /* View 2: PIN Setup or Login */
           <div
             className={`space-y-6 animate-in fade-in zoom-in-95 duration-200 ${
               shake ? 'animate-shake' : ''
             }`}
           >
-            {/* Selected User Header */}
+            {/* Top Navigation */}
             <div className="flex items-center justify-between px-2">
               <button
-                onClick={handleBackToProfiles}
+                onClick={handleBack}
                 disabled={loading}
                 className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors py-1 px-2.5 rounded-lg hover:bg-slate-900 border border-transparent hover:border-slate-800"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                Switch User
+                {step === 'confirm' ? 'Back' : 'Switch User'}
               </button>
 
-              <span className="text-[11px] font-mono text-slate-500">
-                Default: <span className="text-slate-300 font-bold">123456</span>
-              </span>
+              {isFirstLogin ? (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-[10px] font-bold text-blue-400">
+                  <Sparkles className="w-3 h-3" /> First-Time Setup
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-[10px] font-medium text-slate-400">
+                  <Lock className="w-3 h-3 text-emerald-400" /> Secure Login
+                </span>
+              )}
             </div>
 
             {/* Profile Avatar Card */}
@@ -273,12 +322,40 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <h2 className="text-xl font-extrabold text-white mt-3">
-                Hello, {selectedUser.name}
-              </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Enter your 6-digit security PIN
-              </p>
+              {/* Dynamic Header based on Step */}
+              {checkingStatus ? (
+                <div className="flex items-center gap-2 mt-4 text-xs text-slate-400">
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                  <span>Checking account status...</span>
+                </div>
+              ) : step === 'create' ? (
+                <div className="text-center mt-3">
+                  <h2 className="text-xl font-extrabold text-white">
+                    Set Your 6-Digit PIN
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Welcome, {selectedUser.name}! Choose a 6-digit passcode
+                  </p>
+                </div>
+              ) : step === 'confirm' ? (
+                <div className="text-center mt-3">
+                  <h2 className="text-xl font-extrabold text-white flex items-center justify-center gap-1.5">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400" /> Confirm Your PIN
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Re-enter your 6-digit PIN to confirm
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center mt-3">
+                  <h2 className="text-xl font-extrabold text-white">
+                    Hello, {selectedUser.name}
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Enter your 6-digit security PIN
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* 6 Digit PIN Indicators */}
@@ -317,11 +394,11 @@ export default function LoginPage() {
             {loading && (
               <div className="flex items-center justify-center gap-2 text-xs text-blue-400 font-medium">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Verifying PIN...</span>
+                <span>{step === 'confirm' ? 'Saving your new PIN...' : 'Verifying PIN...'}</span>
               </div>
             )}
 
-            {/* Numeric Keypad for Touch / Mouse Clicks */}
+            {/* Numeric Keypad */}
             <div className="grid grid-cols-3 gap-2.5 max-w-xs mx-auto pt-1">
               {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
                 <button
@@ -370,7 +447,7 @@ export default function LoginPage() {
         )}
       </div>
 
-      {/* Hidden real input for keyboard support on mobile/desktop */}
+      {/* Hidden input for physical keyboard entry */}
       <input
         ref={inputRef}
         type="password"

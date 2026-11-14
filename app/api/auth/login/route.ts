@@ -29,23 +29,11 @@ export async function POST(request: Request) {
     const cleanUsername = username.trim().toLowerCase();
     const cleanPin = pin.trim();
 
-    // Check environment variable PIN overrides (e.g., ARVIN_PIN or JUDE_PIN)
-    const envPin =
-      process.env[`${cleanUsername.toUpperCase()}_PIN`] ||
-      process.env[`PIN_${cleanUsername.toUpperCase()}`] ||
-      process.env.DEFAULT_PIN ||
-      '123456';
-
-    // Find or create user
+    // Find user
     let user = await db.user.findUnique({ where: { username: cleanUsername } });
 
     if (!user) {
-      // Validate PIN against env or default '123456'
-      if (cleanPin !== envPin && cleanPin !== '123456') {
-        return NextResponse.json({ error: 'Incorrect 6-digit PIN' }, { status: 401 });
-      }
-
-      // Create user + seed default projects + settings
+      // First login! User sets their own PIN here.
       user = await db.user.create({
         data: {
           username: cleanUsername,
@@ -68,19 +56,16 @@ export async function POST(request: Request) {
           hourlyRate: 0.0,
         },
       });
+    } else if (!user.pin) {
+      // User was pre-created but has no PIN yet -> First login sets their PIN!
+      user = await db.user.update({
+        where: { id: user.id },
+        data: { pin: cleanPin, avatar: user.avatar || `/avatars/${cleanUsername}.svg` },
+      });
     } else {
-      // Existing user validation
-      const expectedPin = user.pin || envPin;
-      if (cleanPin !== expectedPin && cleanPin !== '123456') {
-        return NextResponse.json({ error: 'Incorrect 6-digit PIN' }, { status: 401 });
-      }
-
-      // If user had no pin stored yet, update it
-      if (!user.pin) {
-        await db.user.update({
-          where: { id: user.id },
-          data: { pin: cleanPin, avatar: user.avatar || `/avatars/${cleanUsername}.svg` },
-        });
+      // User already has a set PIN -> Verify it!
+      if (cleanPin !== user.pin) {
+        return NextResponse.json({ error: 'Incorrect 6-digit PIN. Please try again.' }, { status: 401 });
       }
     }
 
@@ -102,6 +87,9 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     console.error('Login failed:', error);
-    return NextResponse.json({ error: 'Login failed. Please verify database connection.' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Login failed. Please verify database connection.' },
+      { status: 500 }
+    );
   }
 }
