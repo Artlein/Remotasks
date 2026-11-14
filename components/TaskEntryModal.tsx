@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Clock, Calendar, Folder, FileText, CheckCircle2, AlertCircle, Plus } from 'lucide-react';
 import { getLogicalDate, parseDurationToMinutes, formatMinutesToDuration } from '@/lib/logical-day';
+import { saveStoredTasks, loadStoredTasks } from '@/lib/client-sync';
 
 interface Project {
   id: string;
@@ -137,9 +138,14 @@ export function TaskEntryModal({
         body: JSON.stringify(payload),
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error || 'Failed to save task');
+      }
+
+      if (data && data.id) {
+        const current = loadStoredTasks() || [];
+        saveStoredTasks([data, ...current.filter((t) => t.id !== data.id)]);
       }
 
       onSave();

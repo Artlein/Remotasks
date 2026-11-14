@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Search, Calendar, Edit3, Trash2, ChevronLeft, ChevronRight, FileText, RefreshCw, XCircle, Filter, Plus, AlertCircle, Zap, Copy } from 'lucide-react';
 import { formatMinutesToDuration, formatMinutesToFriendly, formatMinutesToDecimal, parseDurationToMinutes, getLogicalDate } from '@/lib/logical-day';
+import { saveStoredTasks } from '@/lib/client-sync';
 
 export interface TaskItem {
   id: string;
@@ -136,9 +137,13 @@ export function TaskLogTable({
         }),
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error || 'Failed to add task');
+      }
+
+      if (data && data.id) {
+        saveStoredTasks([data, ...tasks]);
       }
 
       onTaskCreatedOrUpdated();
