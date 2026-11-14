@@ -201,10 +201,10 @@ export default function LoginPage() {
       <div className="absolute bottom-1/4 left-1/3 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Main Container */}
-      <div className="w-full max-w-sm z-10 space-y-5">
+      <div className="w-full max-w-md sm:max-w-lg z-10 space-y-6">
         {/* Header Branding */}
-        <div className="flex flex-col items-center gap-2 text-center">
-          <div className="relative w-11 h-11 rounded-xl overflow-hidden shadow-2xl shadow-blue-500/30 border-2 border-blue-400/40">
+        <div className="flex flex-col items-center gap-2.5 text-center">
+          <div className="relative w-13 h-13 rounded-2xl overflow-hidden shadow-2xl shadow-blue-500/30 border-2 border-blue-400/40">
             <Image
               src="/logo.png"
               alt="RemoAuditTrack Logo"
@@ -215,11 +215,11 @@ export default function LoginPage() {
             />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-white via-slate-100 to-blue-200 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight bg-gradient-to-r from-white via-slate-100 to-blue-200 bg-clip-text text-transparent">
               RemoAuditTrack
             </h1>
-            <p className="text-[11px] text-slate-400 mt-0.5 flex items-center justify-center gap-1 font-medium">
-              <ShieldCheck className="w-3 h-3 text-blue-400" />
+            <p className="text-xs text-slate-400 mt-1 flex items-center justify-center gap-1 font-medium">
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
               Secure Multi-User Workstation
             </p>
           </div>
@@ -227,24 +227,24 @@ export default function LoginPage() {
 
         {/* View 1: Profile Selection */}
         {!selectedUser ? (
-          <div className="space-y-4 animate-in fade-in duration-300">
+          <div className="space-y-5 animate-in fade-in duration-300">
             <div className="text-center">
-              <h2 className="text-xs font-bold text-slate-300 uppercase tracking-widest">
+              <h2 className="text-xs sm:text-sm font-bold text-slate-300 uppercase tracking-widest">
                 Who is tracking time?
               </h2>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-400 mt-1">
                 Select your auditor profile to sign in
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-4 sm:gap-5">
               {PROFILES.map((profile) => (
                 <button
                   key={profile.id}
                   onClick={() => handleSelectUser(profile)}
-                  className={`group relative flex flex-col items-center p-4 rounded-2xl bg-slate-900/90 border ${profile.glowColor} transition-all duration-200 hover:scale-[1.03] hover:shadow-2xl active:scale-[0.98] text-center cursor-pointer`}
+                  className={`group relative flex flex-col items-center p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-900/90 border ${profile.glowColor} transition-all duration-200 hover:scale-[1.03] hover:shadow-2xl active:scale-[0.98] text-center cursor-pointer`}
                 >
-                  <div className="relative w-20 h-20 mb-3 rounded-full p-1 bg-gradient-to-tr from-slate-800 to-slate-700 shadow-xl group-hover:shadow-blue-500/30 transition-all">
+                  <div className="relative w-24 h-24 sm:w-28 sm:h-28 mb-3.5 rounded-full p-1 bg-gradient-to-tr from-slate-800 to-slate-700 shadow-xl group-hover:shadow-blue-500/30 transition-all">
                     <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-slate-700/80 group-hover:border-white/50 transition">
                       <Image
                         src={profile.avatar}
@@ -257,14 +257,14 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  <h3 className="text-base font-black text-white group-hover:text-blue-400 transition-colors">
+                  <h3 className="text-lg sm:text-xl font-black text-white group-hover:text-blue-400 transition-colors">
                     {profile.name}
                   </h3>
-                  <span className="text-[11px] font-medium text-slate-400 mt-0.5 line-clamp-1">
+                  <span className="text-xs font-medium text-slate-400 mt-0.5 line-clamp-1">
                     {profile.role}
                   </span>
 
-                  <div className="mt-2 flex items-center gap-1 px-2 py-1 rounded-full bg-slate-950/80 border border-slate-800 text-[10px] text-slate-400 group-hover:text-slate-200 group-hover:border-slate-700 transition">
+                  <div className="mt-3 flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-950/80 border border-slate-800 text-[11px] text-slate-400 group-hover:text-slate-200 group-hover:border-slate-700 transition">
                     <Lock className="w-3 h-3 text-slate-500 group-hover:text-blue-400" />
                     <span className="font-semibold">6-Digit PIN</span>
                   </div>
@@ -273,7 +273,7 @@ export default function LoginPage() {
             </div>
 
             <div className="pt-1 text-center">
-              <span className="text-[10px] text-slate-500 font-medium">
+              <span className="text-xs text-slate-500 font-medium">
                 First login will let you set your 6-digit PIN password.
               </span>
             </div>
@@ -281,7 +281,7 @@ export default function LoginPage() {
         ) : (
           /* View 2: PIN Setup or Login */
           <div
-            className={`space-y-4 animate-in fade-in zoom-in-95 duration-200 ${
+            className={`space-y-5 animate-in fade-in zoom-in-95 duration-200 ${
               shake ? 'animate-shake' : ''
             }`}
           >
@@ -297,11 +297,11 @@ export default function LoginPage() {
               </button>
 
               {isFirstLogin ? (
-                <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-[10px] font-bold text-blue-400">
+                <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-500/15 border border-blue-500/30 text-[11px] font-bold text-blue-400">
                   <Sparkles className="w-3 h-3" /> First-Time Setup
                 </span>
               ) : (
-                <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-[10px] font-medium text-slate-400">
+                <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-[11px] font-medium text-slate-400">
                   <Lock className="w-3 h-3 text-emerald-400" /> Secure Login
                 </span>
               )}
@@ -309,7 +309,7 @@ export default function LoginPage() {
 
             {/* Profile Avatar Card */}
             <div className="flex flex-col items-center">
-              <div className="relative w-14 h-14 rounded-full p-1 bg-gradient-to-tr from-slate-800 to-slate-700 shadow-2xl border-2 border-slate-700">
+              <div className="relative w-18 h-18 sm:w-20 sm:h-20 rounded-full p-1 bg-gradient-to-tr from-slate-800 to-slate-700 shadow-2xl border-2 border-slate-700">
                 <div className="relative w-full h-full rounded-full overflow-hidden">
                   <Image
                     src={selectedUser.avatar}
@@ -321,40 +321,40 @@ export default function LoginPage() {
                   />
                 </div>
                 <div className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-blue-600 text-white shadow-lg border-2 border-slate-950">
-                  <KeyRound className="w-3 h-3" />
+                  <KeyRound className="w-3.5 h-3.5" />
                 </div>
               </div>
 
               {/* Dynamic Header based on Step */}
               {checkingStatus ? (
-                <div className="flex items-center gap-2 mt-3 text-xs text-slate-400 font-medium">
+                <div className="flex items-center gap-2 mt-3.5 text-xs sm:text-sm text-slate-400 font-medium">
                   <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" />
                   <span>Checking account status...</span>
                 </div>
               ) : step === 'create' ? (
-                <div className="text-center mt-3">
-                  <h2 className="text-base font-black text-white">
+                <div className="text-center mt-3.5">
+                  <h2 className="text-xl sm:text-2xl font-black text-white">
                     Set Your 6-Digit PIN
                   </h2>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
+                  <p className="text-xs sm:text-sm text-slate-400 mt-1">
                     Welcome, {selectedUser.name}! Choose a 6-digit passcode
                   </p>
                 </div>
               ) : step === 'confirm' ? (
-                <div className="text-center mt-3">
-                  <h2 className="text-base font-black text-white flex items-center justify-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Confirm Your PIN
+                <div className="text-center mt-3.5">
+                  <h2 className="text-xl sm:text-2xl font-black text-white flex items-center justify-center gap-1.5">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400" /> Confirm Your PIN
                   </h2>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
+                  <p className="text-xs sm:text-sm text-slate-400 mt-1">
                     Re-enter your 6-digit PIN to confirm
                   </p>
                 </div>
               ) : (
-                <div className="text-center mt-3">
-                  <h2 className="text-base font-black text-white">
+                <div className="text-center mt-3.5">
+                  <h2 className="text-xl sm:text-2xl font-black text-white">
                     Hello, {selectedUser.name}
                   </h2>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
+                  <p className="text-xs sm:text-sm text-slate-400 mt-1">
                     Enter your 6-digit security PIN
                   </p>
                 </div>
@@ -362,7 +362,7 @@ export default function LoginPage() {
             </div>
 
             {/* 6 Digit PIN Indicators */}
-            <div className="flex justify-center items-center gap-2 py-1">
+            <div className="flex justify-center items-center gap-2.5 sm:gap-3 py-1">
               {[0, 1, 2, 3, 4, 5].map((index) => {
                 const isFilled = index < pin.length;
                 const isCurrent = index === pin.length;
@@ -370,7 +370,7 @@ export default function LoginPage() {
                 return (
                   <div
                     key={index}
-                    className={`w-9 h-11 rounded-xl border flex items-center justify-center transition-all duration-200 font-mono text-lg font-black ${
+                    className={`w-10 h-13 sm:w-11 sm:h-14 rounded-xl border flex items-center justify-center transition-all duration-200 font-mono text-xl sm:text-2xl font-black ${
                       isFilled
                         ? 'border-blue-500 bg-blue-600/25 text-white shadow-xl shadow-blue-500/25 scale-105'
                         : isCurrent
@@ -387,7 +387,7 @@ export default function LoginPage() {
             {/* Error Message */}
             {error && (
               <div className="text-center">
-                <p className="text-xs font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 py-2 px-3 rounded-lg inline-block">
+                <p className="text-xs sm:text-sm font-semibold text-rose-400 bg-rose-500/10 border border-rose-500/20 py-2 px-3.5 rounded-lg inline-block">
                   {error}
                 </p>
               </div>
@@ -395,21 +395,21 @@ export default function LoginPage() {
 
             {/* Loading Indicator */}
             {loading && (
-              <div className="flex items-center justify-center gap-2 text-xs text-blue-400 font-semibold">
+              <div className="flex items-center justify-center gap-2 text-xs sm:text-sm text-blue-400 font-semibold">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span>{step === 'confirm' ? 'Saving your new PIN...' : 'Verifying PIN...'}</span>
               </div>
             )}
 
             {/* Numeric Keypad */}
-            <div className="grid grid-cols-3 gap-2 max-w-[240px] mx-auto pt-1">
+            <div className="grid grid-cols-3 gap-2.5 max-w-[270px] mx-auto pt-1">
               {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((digit) => (
                 <button
                   key={digit}
                   type="button"
                   onClick={() => handleKeypadPress(digit)}
                   disabled={loading || pin.length >= 6}
-                  className="h-11 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-blue-600 active:text-white border border-slate-800 hover:border-slate-700 text-base font-bold text-slate-100 transition font-mono disabled:opacity-40 shadow-sm"
+                  className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-blue-600 active:text-white border border-slate-800 hover:border-slate-700 text-lg font-bold text-slate-100 transition font-mono disabled:opacity-40 shadow-sm"
                 >
                   {digit}
                 </button>
@@ -420,7 +420,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => setPin('')}
                 disabled={loading || pin.length === 0}
-                className="h-11 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-700 border border-slate-800 text-xs font-bold text-slate-400 hover:text-slate-200 transition disabled:opacity-40"
+                className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-700 border border-slate-800 text-xs font-bold text-slate-400 hover:text-slate-200 transition disabled:opacity-40"
               >
                 Clear
               </button>
@@ -430,7 +430,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => handleKeypadPress('0')}
                 disabled={loading || pin.length >= 6}
-                className="h-11 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-blue-600 active:text-white border border-slate-800 hover:border-slate-700 text-base font-bold text-slate-100 transition font-mono disabled:opacity-40 shadow-sm"
+                className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-blue-600 active:text-white border border-slate-800 hover:border-slate-700 text-lg font-bold text-slate-100 transition font-mono disabled:opacity-40 shadow-sm"
               >
                 0
               </button>
@@ -440,7 +440,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={handleBackspace}
                 disabled={loading || pin.length === 0}
-                className="h-11 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-700 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-rose-400 transition disabled:opacity-40"
+                className="h-12 rounded-xl bg-slate-900 hover:bg-slate-800 active:bg-slate-700 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-rose-400 transition disabled:opacity-40"
                 title="Backspace"
               >
                 <Delete className="w-5 h-5" />
