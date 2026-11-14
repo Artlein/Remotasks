@@ -1,7 +1,7 @@
 {
-  "name": "Remotasks Time Tracker",
-  "short_name": "Remotasks",
-  "description": "Personal Time Tracking System for Remotasks",
+  "name": "RemoAuditTrack",
+  "short_name": "RemoAuditTrack",
+  "description": "Auditor Timesheet & Quality Control Console",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",

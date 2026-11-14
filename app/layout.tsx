@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Remotasks Time Tracker | EQC Quality Assurance',
-  description: 'Personal Time Tracking System for Remotasks EQC Quality Assurance Auditors',
+  title: 'RemoAuditTrack | EQC Quality Assurance',
+  description: 'Personal Time Tracking System for EQC Quality Assurance Auditors',
   manifest: '/manifest.json',
   icons: {
     icon: '/logo.png',
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Remotasks',
+    title: 'RemoAuditTrack',
   },
   formatDetection: {
     telephone: false,

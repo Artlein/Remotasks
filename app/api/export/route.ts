@@ -53,7 +53,7 @@ export async function GET(request: Request) {
       return new NextResponse(csvBuffer, {
         headers: {
           'Content-Type': 'text/csv',
-          'Content-Disposition': `attachment; filename="remotasks_timesheet_${user.username}_${new Date().toISOString().slice(0, 10)}.csv"`,
+          'Content-Disposition': `attachment; filename="remoaudittrack_${user.username}_${new Date().toISOString().slice(0, 10)}.csv"`,
         },
       });
     }
@@ -62,7 +62,7 @@ export async function GET(request: Request) {
     return new NextResponse(xlsxBuffer, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="remotasks_timesheet_${user.username}_${new Date().toISOString().slice(0, 10)}.xlsx"`,
+        'Content-Disposition': `attachment; filename="remoaudittrack_${user.username}_${new Date().toISOString().slice(0, 10)}.xlsx"`,
       },
     });
   } catch (error) {

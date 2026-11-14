@@ -83,7 +83,7 @@ export function HeaderBanner({
           <div className="relative w-14 h-14 rounded-2xl overflow-hidden shadow-xl shadow-blue-500/25 border-2 border-blue-400/30 shrink-0">
             <Image
               src="/logo.png"
-              alt="Remotasks QA Logo"
+              alt="RemoAuditTrack Logo"
               fill
               className="object-cover"
               priority
@@ -93,7 +93,7 @@ export function HeaderBanner({
           <div>
             <div className="flex items-center gap-2.5">
               <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-blue-200 bg-clip-text text-transparent">
-                Remotasks QA Time Console
+                RemoAuditTrack
               </h1>
               <span className="led-indicator led-emerald" title="System Active" />
               {streakDays > 0 && (

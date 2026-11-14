@@ -207,7 +207,7 @@ export default function LoginPage() {
           <div className="relative w-16 h-16 rounded-2xl overflow-hidden shadow-2xl shadow-blue-500/30 border-2 border-blue-400/40">
             <Image
               src="/logo.png"
-              alt="Remotasks QA Logo"
+              alt="RemoAuditTrack Logo"
               fill
               className="object-cover"
               priority
@@ -216,7 +216,7 @@ export default function LoginPage() {
           </div>
           <div>
             <h1 className="text-3xl sm:text-4xl font-black tracking-tight bg-gradient-to-r from-white via-slate-100 to-blue-200 bg-clip-text text-transparent">
-              Remotasks QA Console
+              RemoAuditTrack
             </h1>
             <p className="text-sm text-slate-400 mt-1 flex items-center justify-center gap-1.5 font-medium">
               <ShieldCheck className="w-4 h-4 text-blue-400" />
