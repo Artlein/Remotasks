@@ -43,6 +43,8 @@ export const DEFAULT_SETTINGS: SystemSettingsItem = {
   hourlyRate: 0.0,
 };
 
+const PERMANENT_VAULT_KEY = 'remotasks_tasks_permanent_vault';
+
 function getStorageKeys(userId?: string) {
   const suffix = userId ? `_${userId}` : '';
   return {
@@ -52,7 +54,6 @@ function getStorageKeys(userId?: string) {
   };
 }
 
-// Resolved at runtime from window so it always reflects the active user
 function STORAGE_KEYS() {
   if (typeof window === 'undefined') return getStorageKeys();
   const userId = (window as any).__RT_USER_ID as string | undefined;
@@ -60,50 +61,74 @@ function STORAGE_KEYS() {
 }
 
 /**
- * Load tasks from LocalStorage
+ * Load tasks from LocalStorage across all known keys and permanent vault.
+ * Deduplicates and guarantees no October/November records are ever lost.
  */
 export function loadStoredTasks(overrideUserId?: string, overrideUsername?: string): TaskItem[] | null {
   if (typeof window === 'undefined') return null;
   try {
     const activeUserId = overrideUserId || ((window as any).__RT_USER_ID as string | undefined);
-    const activeUsername = overrideUsername || ((window as any).__RT_USERNAME as string | undefined);
     const keys = getStorageKeys(activeUserId);
 
-    let userTasks: TaskItem[] = [];
-    const raw = localStorage.getItem(keys.TASKS);
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) userTasks = parsed;
-      } catch {}
-    }
+    const taskMap = new Map<string, TaskItem>();
+    const fingerprintMap = new Map<string, TaskItem>();
 
-    // ALL legacy pre-multiuser logs belong strictly to Arvin!
-    // Always merge legacy remotasks_tasks_v1 so all November/October records are NEVER lost.
-    const isArvin = activeUsername === 'arvin' || (!activeUsername && !activeUserId);
-    if (isArvin) {
-      const legacyRaw = localStorage.getItem('remotasks_tasks_v1');
-      if (legacyRaw) {
-        try {
-          const legacyParsed = JSON.parse(legacyRaw);
-          if (Array.isArray(legacyParsed) && legacyParsed.length > 0) {
-            const taskMap = new Map<string, TaskItem>();
-            // Add legacy tasks first
-            legacyParsed.forEach((t) => {
-              if (t && t.id) taskMap.set(t.id, t);
-            });
-            // Merge existing userTasks
-            userTasks.forEach((t) => {
-              if (t && t.id) taskMap.set(t.id, t);
-            });
-            userTasks = Array.from(taskMap.values()).sort((a, b) => b.date.localeCompare(a.date));
-            localStorage.setItem(keys.TASKS, JSON.stringify(userTasks));
+    const collectTasks = (rawJson: string | null) => {
+      if (!rawJson) return;
+      try {
+        const parsed = JSON.parse(rawJson);
+        if (Array.isArray(parsed)) {
+          for (const item of parsed) {
+            if (item && typeof item === 'object' && item.date && item.durationMinutes) {
+              const task: TaskItem = {
+                id: String(item.id || `task_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`),
+                date: String(item.date),
+                projectId: String(item.projectId || 'fna1'),
+                project: item.project || { id: 'fna1', name: 'FNA1' },
+                description: String(item.description || ''),
+                durationMinutes: Math.round(Number(item.durationMinutes) || 0),
+                status: String(item.status || 'Done'),
+                notes: item.notes ? String(item.notes) : null,
+              };
+
+              const fp = `${task.date}|${task.description}|${task.durationMinutes}`;
+              if (!taskMap.has(task.id) && !fingerprintMap.has(fp)) {
+                taskMap.set(task.id, task);
+                fingerprintMap.set(fp, task);
+              }
+            }
           }
-        } catch {}
+        }
+      } catch {}
+    };
+
+    // 1. Collect from permanent vault
+    collectTasks(localStorage.getItem(PERMANENT_VAULT_KEY));
+
+    // 2. Collect from user-scoped key
+    collectTasks(localStorage.getItem(keys.TASKS));
+
+    // 3. Collect from legacy global key
+    collectTasks(localStorage.getItem('remotasks_tasks_v1'));
+
+    // 4. Scan all localStorage keys matching remotasks_tasks
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('remotasks_tasks')) {
+        collectTasks(localStorage.getItem(k));
       }
     }
 
-    if (userTasks.length > 0) return userTasks;
+    const unifiedTasks = Array.from(taskMap.values()).sort((a, b) => b.date.localeCompare(a.date));
+
+    if (unifiedTasks.length > 0) {
+      // Keep storage and permanent vault in sync
+      try {
+        localStorage.setItem(keys.TASKS, JSON.stringify(unifiedTasks));
+        localStorage.setItem(PERMANENT_VAULT_KEY, JSON.stringify(unifiedTasks));
+      } catch {}
+      return unifiedTasks;
+    }
   } catch (e) {
     console.error('Error loading stored tasks:', e);
   }
@@ -111,63 +136,70 @@ export function loadStoredTasks(overrideUserId?: string, overrideUsername?: stri
 }
 
 /**
- * Automatically sync any legacy local tasks to the database under Arvin
+ * Save tasks to LocalStorage and Permanent Vault.
+ * Unless isDeletion is explicitly true, it never drops existing tasks.
  */
-export async function syncLegacyTasksIfPresent(userId: string, username: string) {
-  if (typeof window === 'undefined' || username !== 'arvin') return;
+export function saveStoredTasks(tasks: TaskItem[], isDeletion = false) {
+  if (typeof window === 'undefined') return;
   try {
-    const legacyRaw = localStorage.getItem('remotasks_tasks_v1');
-    const userKeys = getStorageKeys(userId);
-    let tasksToSync: TaskItem[] = [];
+    const keys = STORAGE_KEYS();
 
-    if (legacyRaw) {
-      try {
-        const parsed = JSON.parse(legacyRaw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          tasksToSync = parsed;
-        }
-      } catch {}
-    }
+    let finalTasks = tasks;
 
-    // Also include user's locally stored tasks if any
-    const currentRaw = localStorage.getItem(userKeys.TASKS);
-    if (currentRaw) {
-      try {
-        const parsed = JSON.parse(currentRaw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const ids = new Set(tasksToSync.map((t) => t.id));
-          parsed.forEach((t) => {
-            if (!ids.has(t.id)) tasksToSync.push(t);
-          });
-        }
-      } catch {}
-    }
-
-    if (tasksToSync.length > 0) {
-      const res = await fetch('/api/tasks/sync-legacy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tasks: tasksToSync }),
-      });
-      if (res.ok) {
-        // Once synced to PostgreSQL, keep user scoped storage updated
-        localStorage.setItem(userKeys.TASKS, JSON.stringify(tasksToSync));
+    if (!isDeletion) {
+      // Merge with any existing tasks in vault so nothing is ever dropped
+      const existing = loadStoredTasks();
+      if (existing && existing.length > 0) {
+        const map = new Map<string, TaskItem>();
+        existing.forEach((t) => map.set(t.id, t));
+        tasks.forEach((t) => map.set(t.id, t));
+        finalTasks = Array.from(map.values()).sort((a, b) => b.date.localeCompare(a.date));
       }
     }
-  } catch (err) {
-    console.error('Error syncing legacy tasks to server:', err);
+
+    const json = JSON.stringify(finalTasks);
+    localStorage.setItem(keys.TASKS, json);
+    localStorage.setItem(PERMANENT_VAULT_KEY, json);
+  } catch (e) {
+    console.error('Error saving tasks to storage:', e);
   }
 }
 
 /**
- * Save tasks to LocalStorage
+ * Automatically sync local tasks to PostgreSQL with retries and batching.
  */
-export function saveStoredTasks(tasks: TaskItem[]) {
-  if (typeof window === 'undefined') return;
+export async function syncLegacyTasksIfPresent(userId: string, username: string) {
+  if (typeof window === 'undefined' || username !== 'arvin') return;
   try {
-    localStorage.setItem(STORAGE_KEYS().TASKS, JSON.stringify(tasks));
-  } catch (e) {
-    console.error('Error saving tasks to storage:', e);
+    const allTasks = loadStoredTasks(userId, username);
+    if (!allTasks || allTasks.length === 0) return;
+
+    // Retry up to 3 times
+    let success = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await fetch('/api/tasks/sync-legacy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tasks: allTasks }),
+        });
+
+        if (res.ok) {
+          success = true;
+          break;
+        }
+      } catch {
+        await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
+      }
+    }
+
+    if (success) {
+      const keys = getStorageKeys(userId);
+      localStorage.setItem(keys.TASKS, JSON.stringify(allTasks));
+      localStorage.setItem(PERMANENT_VAULT_KEY, JSON.stringify(allTasks));
+    }
+  } catch (err) {
+    console.error('Error syncing legacy tasks to server:', err);
   }
 }
 
@@ -238,7 +270,6 @@ export function computeDailyRollup(
   preset: 'this_week' | 'last_week' | 'this_month' | 'all' = 'this_week',
   cutoffHour: number = 0
 ) {
-  // Determine date bounds
   const todayDate = new Date();
   let minDate: string | null = null;
   let maxDate: string | null = null;
@@ -261,14 +292,12 @@ export function computeDailyRollup(
     maxDate = format(end, 'yyyy-MM-dd');
   }
 
-  // Filter tasks by date if bounds exist
   const filteredTasks = tasks.filter((t) => {
     if (minDate && t.date < minDate) return false;
     if (maxDate && t.date > maxDate) return false;
     return true;
   });
 
-  // Group by date
   const dateMap: Record<
     string,
     { breakdown: Record<string, number>; totalMinutes: number; taskCount: number }

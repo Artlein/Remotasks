@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, withRetry } from '@/lib/db';
 import { parseDurationToMinutes } from '@/lib/logical-day';
 import { getSessionUser } from '@/lib/auth';
 
@@ -15,7 +15,9 @@ export async function PUT(
     const body = await request.json();
     const { date, projectId, description, durationStr, durationMinutes, status, notes } = body;
 
-    const existingTask = await db.task.findFirst({ where: { id, userId: user.id } });
+    const existingTask = await withRetry(() =>
+      db.task.findFirst({ where: { id, userId: user.id } })
+    );
     if (!existingTask) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
@@ -35,11 +37,13 @@ export async function PUT(
       if (parsed > 0) updateData.durationMinutes = parsed;
     }
 
-    const updatedTask = await db.task.update({
-      where: { id },
-      data: updateData,
-      include: { project: true },
-    });
+    const updatedTask = await withRetry(() =>
+      db.task.update({
+        where: { id },
+        data: updateData,
+        include: { project: true },
+      })
+    );
 
     return NextResponse.json(updatedTask);
   } catch (error) {
@@ -58,12 +62,14 @@ export async function DELETE(
 
     const { id } = await params;
 
-    const existingTask = await db.task.findFirst({ where: { id, userId: user.id } });
+    const existingTask = await withRetry(() =>
+      db.task.findFirst({ where: { id, userId: user.id } })
+    );
     if (!existingTask) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
 
-    await db.task.delete({ where: { id } });
+    await withRetry(() => db.task.delete({ where: { id } }));
     return NextResponse.json({ success: true, id });
   } catch (error) {
     console.error('Failed to delete task:', error);

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, seedUserDataIfNeeded } from '@/lib/db';
+import { db, seedUserDataIfNeeded, withRetry } from '@/lib/db';
 import { parseDurationToMinutes, getLogicalDate } from '@/lib/logical-day';
 import { getSessionUser } from '@/lib/auth';
 
@@ -45,11 +45,13 @@ export async function GET(request: Request) {
       ];
     }
 
-    const tasks = await db.task.findMany({
-      where,
-      include: { project: true },
-      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
-    });
+    const tasks = await withRetry(() =>
+      db.task.findMany({
+        where,
+        include: { project: true },
+        orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+      })
+    );
 
     return NextResponse.json(tasks);
   } catch (error) {
@@ -91,40 +93,50 @@ export async function POST(request: Request) {
 
     let taskDate = date;
     if (!taskDate) {
-      const settings = await db.userSettings.findUnique({ where: { userId: user.id } });
+      const settings = await withRetry(() =>
+        db.userSettings.findUnique({ where: { userId: user.id } })
+      );
       const cutoff = settings?.logicalCutoffHour ?? 0;
       taskDate = getLogicalDate(new Date(), cutoff);
     }
 
     // Validate project belongs to this user
     let validProjectId = projectId;
-    const projectExists = await db.project.findFirst({ where: { id: validProjectId, userId: user.id } });
+    const projectExists = await withRetry(() =>
+      db.project.findFirst({ where: { id: validProjectId, userId: user.id } })
+    );
     if (!projectExists) {
-      const fallback = await db.project.findFirst({ where: { userId: user.id, active: true } });
+      const fallback = await withRetry(() =>
+        db.project.findFirst({ where: { userId: user.id, active: true } })
+      );
       if (fallback) {
         validProjectId = fallback.id;
       } else {
-        const created = await db.project.create({ data: { name: 'FNA1', active: true, userId: user.id } });
+        const created = await withRetry(() =>
+          db.project.create({ data: { name: 'FNA1', active: true, userId: user.id } })
+        );
         validProjectId = created.id;
       }
     }
 
-    const newTask = await db.task.create({
-      data: {
-        date: taskDate,
-        projectId: validProjectId,
-        userId: user.id,
-        description: description.trim(),
-        durationMinutes: computedMinutes,
-        status: status || 'Done',
-        notes: notes ? notes.trim() : null,
-      },
-      include: { project: true },
-    });
+    const newTask = await withRetry(() =>
+      db.task.create({
+        data: {
+          date: taskDate,
+          projectId: validProjectId,
+          userId: user.id,
+          description: description.trim(),
+          durationMinutes: computedMinutes,
+          status: status || 'Done',
+          notes: notes ? notes.trim() : null,
+        },
+        include: { project: true },
+      })
+    );
 
     return NextResponse.json(newTask, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to create task:', error);
-    return NextResponse.json({ error: 'Failed to create task' }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Failed to create task' }, { status: 500 });
   }
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, seedUserDataIfNeeded, DEFAULT_PROJECT_NAMES } from '@/lib/db';
+import { db, seedUserDataIfNeeded, DEFAULT_PROJECT_NAMES, withRetry } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -14,23 +14,29 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const includeInactive = searchParams.get('all') === 'true';
 
-    let projects = await db.project.findMany({
-      where: includeInactive ? { userId: user.id } : { userId: user.id, active: true },
-      orderBy: { name: 'asc' },
-    });
+    let projects = await withRetry(() =>
+      db.project.findMany({
+        where: includeInactive ? { userId: user.id } : { userId: user.id, active: true },
+        orderBy: { name: 'asc' },
+      })
+    );
 
     if (projects.length === 0) {
       for (const name of DEFAULT_PROJECT_NAMES) {
         try {
-          await db.project.create({ data: { name, active: true, userId: user.id } });
+          await withRetry(() =>
+            db.project.create({ data: { name, active: true, userId: user.id } })
+          );
         } catch {
           // ignore duplicates
         }
       }
-      projects = await db.project.findMany({
-        where: includeInactive ? { userId: user.id } : { userId: user.id, active: true },
-        orderBy: { name: 'asc' },
-      });
+      projects = await withRetry(() =>
+        db.project.findMany({
+          where: includeInactive ? { userId: user.id } : { userId: user.id, active: true },
+          orderBy: { name: 'asc' },
+        })
+      );
     }
 
     if (projects.length === 0) {
@@ -73,24 +79,30 @@ export async function POST(request: Request) {
 
     const trimmedName = name.trim();
 
-    const existing = await db.project.findUnique({
-      where: { name_userId: { name: trimmedName, userId: user.id } },
-    });
+    const existing = await withRetry(() =>
+      db.project.findUnique({
+        where: { name_userId: { name: trimmedName, userId: user.id } },
+      })
+    );
 
     if (existing) {
       if (!existing.active) {
-        const reactivated = await db.project.update({
-          where: { id: existing.id },
-          data: { active: true },
-        });
+        const reactivated = await withRetry(() =>
+          db.project.update({
+            where: { id: existing.id },
+            data: { active: true },
+          })
+        );
         return NextResponse.json(reactivated);
       }
       return NextResponse.json({ error: 'Project already exists' }, { status: 400 });
     }
 
-    const newProject = await db.project.create({
-      data: { name: trimmedName, active: true, userId: user.id },
-    });
+    const newProject = await withRetry(() =>
+      db.project.create({
+        data: { name: trimmedName, active: true, userId: user.id },
+      })
+    );
 
     return NextResponse.json(newProject, { status: 201 });
   } catch (error) {

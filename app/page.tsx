@@ -70,28 +70,11 @@ export default function DashboardPage() {
 
   // Hydrate from LocalStorage on mount so data is 100% instant and survives refresh
   useEffect(() => {
-    // Fetch current user and ensure all legacy logs are assigned to Arvin
-    fetch('/api/auth/me')
-      .then((r) => r.ok ? r.json() : null)
-      .then(async (user) => {
-        if (user) {
-          setCurrentUser(user);
-          (window as any).__RT_USER_ID = user.id;
-          (window as any).__RT_USERNAME = user.username;
-
-          // If Arvin, sync any legacy local logs before to database under Arvin
-          if (user.username === 'arvin') {
-            await syncLegacyTasksIfPresent(user.id, user.username);
-          }
-
-          const userTasks = loadStoredTasks(user.id, user.username);
-          if (userTasks && userTasks.length > 0) {
-            setTasks(userTasks);
-          }
-          fetchTasks();
-        }
-      })
-      .catch(() => {});
+    // 1. Immediately hydrate from LocalStorage so data is 100% instant and offline-first
+    const initialTasks = loadStoredTasks();
+    if (initialTasks && initialTasks.length > 0) {
+      setTasks(initialTasks);
+    }
 
     const storedSettings = loadStoredSettings();
     if (storedSettings) {
@@ -105,10 +88,29 @@ export default function DashboardPage() {
       setProjects(storedProjects);
     }
 
-    const storedTasks = loadStoredTasks();
-    if (storedTasks && storedTasks.length > 0) {
-      setTasks(storedTasks);
-    }
+    // 2. Fetch current user and ensure all legacy logs are assigned to Arvin
+    fetch('/api/auth/me')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(async (user) => {
+        if (user) {
+          setCurrentUser(user);
+          (window as any).__RT_USER_ID = user.id;
+          (window as any).__RT_USERNAME = user.username;
+
+          const userTasks = loadStoredTasks(user.id, user.username);
+          if (userTasks && userTasks.length > 0) {
+            setTasks(userTasks);
+          }
+
+          // If Arvin, sync any legacy local logs before to database under Arvin
+          if (user.username === 'arvin') {
+            await syncLegacyTasksIfPresent(user.id, user.username);
+          }
+
+          fetchTasks();
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Load Settings from API in background
@@ -169,13 +171,13 @@ export default function DashboardPage() {
           const hasFilters = startDate || endDate || selectedProjectId !== 'ALL' || selectedStatus !== 'ALL' || searchQuery;
           if (!hasFilters) {
             setTasks((prev) => {
-              // Merge stored and server tasks without losing client-side additions
-              if (data.length === 0 && prev.length > 0) {
-                return prev; // keep local tasks if server is cold-restarted
-              }
               const mergedMap = new Map<string, TaskItem>();
+              // Load from local storage vault as well to be 100% sure nothing was lost
+              const localTasks = loadStoredTasks() || [];
+              localTasks.forEach((t) => mergedMap.set(t.id, t));
               prev.forEach((t) => mergedMap.set(t.id, t));
               data.forEach((t: TaskItem) => mergedMap.set(t.id, t));
+
               const merged = Array.from(mergedMap.values()).sort((a, b) => b.date.localeCompare(a.date));
               saveStoredTasks(merged);
               return merged;
@@ -248,7 +250,7 @@ export default function DashboardPage() {
     // Immediately delete from client state & local storage
     setTasks((prev) => {
       const updated = prev.filter((t) => t.id !== taskId);
-      saveStoredTasks(updated);
+      saveStoredTasks(updated, true);
       return updated;
     });
 

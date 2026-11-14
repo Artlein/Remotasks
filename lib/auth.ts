@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { db } from '@/lib/db';
+import { db, withRetry } from '@/lib/db';
 import { SESSION_COOKIE_NAME } from '@/lib/constants';
 
 export { SESSION_COOKIE_NAME };
@@ -12,14 +12,16 @@ export interface SessionUser {
 
 /**
  * Returns the logged-in user from the session cookie, or null if not authenticated.
+ * Uses retry logic to handle Supabase cold-start timeouts.
  */
 export async function getSessionUser(): Promise<SessionUser | null> {
+  let userId: string | undefined;
   try {
     const cookieStore = await cookies();
-    const userId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    userId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
     if (!userId) return null;
 
-    const user = await db.user.findUnique({ where: { id: userId } });
+    const user = await withRetry(() => db.user.findUnique({ where: { id: userId! } }));
     if (!user) return null;
 
     return {
@@ -28,19 +30,16 @@ export async function getSessionUser(): Promise<SessionUser | null> {
       avatar: user.avatar || `/avatars/${user.username.toLowerCase()}.png`,
     };
   } catch (error) {
-    console.error('getSessionUser DB error:', error);
-    // If DB is momentarily unreachable, do not kick out valid logged-in session
-    try {
-      const cookieStore = await cookies();
-      const userId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
-      if (userId) {
-        return {
-          id: userId,
-          username: userId === '8e117503-2d6d-41ac-aebe-1876bae8f02b' ? 'arvin' : 'user',
-          avatar: '/avatars/arvin.png',
-        };
-      }
-    } catch {}
+    console.error('getSessionUser DB error (after retries):', error);
+    // If DB is momentarily unreachable after retries, don't kick out valid session
+    if (userId) {
+      const username = userId === '8e117503-2d6d-41ac-aebe-1876bae8f02b' ? 'arvin' : 'user';
+      return {
+        id: userId,
+        username,
+        avatar: `/avatars/${username}.png`,
+      };
+    }
     return null;
   }
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, seedUserDataIfNeeded } from '@/lib/db';
+import { db, seedUserDataIfNeeded, withRetry } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -11,12 +11,16 @@ export async function GET() {
 
     await seedUserDataIfNeeded(user.id);
 
-    let settings = await db.userSettings.findUnique({ where: { userId: user.id } });
+    let settings = await withRetry(() =>
+      db.userSettings.findUnique({ where: { userId: user.id } })
+    );
 
     if (!settings) {
-      settings = await db.userSettings.create({
-        data: { userId: user.id, logicalCutoffHour: 0, dailyTargetHours: 8.0, hourlyRate: 0.0 },
-      });
+      settings = await withRetry(() =>
+        db.userSettings.create({
+          data: { userId: user.id, logicalCutoffHour: 0, dailyTargetHours: 8.0, hourlyRate: 0.0 },
+        })
+      );
     }
 
     return NextResponse.json({
@@ -51,16 +55,18 @@ export async function POST(request: Request) {
       updateData.hourlyRate = parseFloat(hourlyRate.toFixed(2));
     }
 
-    const updated = await db.userSettings.upsert({
-      where: { userId: user.id },
-      update: updateData,
-      create: {
-        userId: user.id,
-        logicalCutoffHour: updateData.logicalCutoffHour ?? 0,
-        dailyTargetHours: updateData.dailyTargetHours ?? 8.0,
-        hourlyRate: updateData.hourlyRate ?? 0.0,
-      },
-    });
+    const updated = await withRetry(() =>
+      db.userSettings.upsert({
+        where: { userId: user.id },
+        update: updateData,
+        create: {
+          userId: user.id,
+          logicalCutoffHour: updateData.logicalCutoffHour ?? 0,
+          dailyTargetHours: updateData.dailyTargetHours ?? 8.0,
+          hourlyRate: updateData.hourlyRate ?? 0.0,
+        },
+      })
+    );
 
     return NextResponse.json(updated);
   } catch (error) {

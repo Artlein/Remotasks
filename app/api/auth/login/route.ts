@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, withRetry } from '@/lib/db';
 import { SESSION_COOKIE_NAME } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -32,41 +32,51 @@ export async function POST(request: Request) {
     cleanUsername = username.trim().toLowerCase();
     cleanPin = pin.trim();
 
-    // Find user
-    let user = await db.user.findUnique({ where: { username: cleanUsername } });
+    // Find user — with retry for Supabase cold starts
+    let user = await withRetry(() =>
+      db.user.findUnique({ where: { username: cleanUsername } })
+    );
 
     if (!user) {
-      // First login! User sets their own PIN here.
-      user = await db.user.create({
-        data: {
-          username: cleanUsername,
-          pin: cleanPin,
-          avatar: `/avatars/${cleanUsername}.png`,
-        },
-      });
+      // First login — user sets their own PIN here.
+      user = await withRetry(() =>
+        db.user.create({
+          data: {
+            username: cleanUsername,
+            pin: cleanPin,
+            avatar: `/avatars/${cleanUsername}.png`,
+          },
+        })
+      );
 
       // Seed default projects for new user
       for (const name of DEFAULT_PROJECT_NAMES) {
-        await db.project.create({ data: { name, active: true, userId: user.id } });
+        await withRetry(() =>
+          db.project.create({ data: { name, active: true, userId: user!.id } })
+        );
       }
 
       // Seed default settings
-      await db.userSettings.create({
-        data: {
-          userId: user.id,
-          logicalCutoffHour: 0,
-          dailyTargetHours: 8.0,
-          hourlyRate: 0.0,
-        },
-      });
+      await withRetry(() =>
+        db.userSettings.create({
+          data: {
+            userId: user!.id,
+            logicalCutoffHour: 0,
+            dailyTargetHours: 8.0,
+            hourlyRate: 0.0,
+          },
+        })
+      );
     } else if (!user.pin) {
-      // User was pre-created but has no PIN yet -> First login sets their PIN!
-      user = await db.user.update({
-        where: { id: user.id },
-        data: { pin: cleanPin, avatar: user.avatar || `/avatars/${cleanUsername}.png` },
-      });
+      // User was pre-created but has no PIN yet — first login sets their PIN
+      user = await withRetry(() =>
+        db.user.update({
+          where: { id: user!.id },
+          data: { pin: cleanPin, avatar: user!.avatar || `/avatars/${cleanUsername}.png` },
+        })
+      );
     } else {
-      // User already has a set PIN -> Verify it!
+      // User already has a set PIN — verify it
       if (cleanPin !== user.pin) {
         return NextResponse.json({ error: 'Incorrect 6-digit PIN. Please try again.' }, { status: 401 });
       }
@@ -89,9 +99,9 @@ export async function POST(request: Request) {
 
     return response;
   } catch (error: any) {
-    console.error('Database login error:', error);
+    console.error('Database login error (after retries):', error);
 
-    // Fallback: If DB is temporarily paused, allow Arvin (or valid PIN) to log in so work is never blocked
+    // Fallback: If DB is temporarily paused/unreachable, allow Arvin to log in so work is never blocked
     if (cleanUsername === 'arvin' && cleanPin === '032504') {
       const fallbackUserId = '8e117503-2d6d-41ac-aebe-1876bae8f02b';
       const fallbackResponse = NextResponse.json({
@@ -114,7 +124,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { error: error?.message ? `Database connection error: ${error.message}` : 'Login failed. Please verify database connection.' },
+      { error: 'Login failed. Database is temporarily unavailable — please try again in a few seconds.' },
       { status: 500 }
     );
   }

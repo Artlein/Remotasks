@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, seedUserDataIfNeeded } from '@/lib/db';
+import { db, seedUserDataIfNeeded, withRetry } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -24,58 +24,89 @@ export async function POST(request: Request) {
     }
 
     // Map existing projects for Arvin
-    const existingProjects = await db.project.findMany({ where: { userId: user.id } });
+    const existingProjects = await withRetry(() =>
+      db.project.findMany({ where: { userId: user.id } })
+    );
     const projectMap = new Map<string, string>();
     for (const p of existingProjects) {
       projectMap.set(p.name.toLowerCase(), p.id);
     }
 
-    let synced = 0;
+    // Get all existing task IDs for Arvin to avoid duplicates (fast bulk lookup)
+    const existingTasks = await withRetry(() =>
+      db.task.findMany({
+        where: { userId: user.id },
+        select: { id: true, date: true, description: true, durationMinutes: true },
+      })
+    );
+
+    // Build a de-dup set: by ID and by (date+description+duration) fingerprint
+    const existingIds = new Set(existingTasks.map((t) => t.id));
+    const existingFingerprints = new Set(
+      existingTasks.map((t) => `${t.date}|${t.description}|${t.durationMinutes}`)
+    );
+
+    // Prepare tasks to insert
+    type TaskRow = {
+      date: string;
+      projectId: string;
+      userId: string;
+      description: string;
+      durationMinutes: number;
+      status: string;
+      notes: string | null;
+    };
+    const toInsert: TaskRow[] = [];
+
     for (const task of tasks) {
       const durationMinutes = Math.round(Number(task.durationMinutes) || 0);
       if (durationMinutes <= 0 || !task.date) continue;
 
       const description = (task.description && String(task.description).trim()) || 'Audit Task';
+      const fingerprint = `${task.date}|${description}|${durationMinutes}`;
+
+      // Skip if already in DB by ID or fingerprint
+      if (existingIds.has(task.id) || existingFingerprints.has(fingerprint)) continue;
+
       const projName = task.project?.name || 'Aloha_OTS';
       let projectId = projectMap.get(projName.toLowerCase());
 
       if (!projectId) {
-        const newProj = await db.project.create({
-          data: { name: projName, active: true, userId: user.id },
-        });
+        // Create missing project
+        const newProj = await withRetry(() =>
+          db.project.create({ data: { name: projName, active: true, userId: user.id } })
+        );
         projectId = newProj.id;
         projectMap.set(projName.toLowerCase(), newProj.id);
       }
 
-      // Check if task already exists (by ID or date + description + duration)
-      const existing = await db.task.findFirst({
-        where: {
-          userId: user.id,
-          OR: [
-            { id: task.id },
-            {
-              date: task.date,
-              description: description,
-              durationMinutes: durationMinutes,
-            },
-          ],
-        },
+      toInsert.push({
+        date: task.date,
+        projectId,
+        userId: user.id,
+        description,
+        durationMinutes,
+        status: task.status || 'Done',
+        notes: task.notes || null,
       });
 
-      if (!existing) {
-        await db.task.create({
-          data: {
-            date: task.date,
-            projectId,
-            userId: user.id,
-            description: description,
-            durationMinutes: durationMinutes,
-            status: task.status || 'Done',
-            notes: task.notes || null,
-          },
-        });
-        synced++;
-      }
+      // Track fingerprint to avoid intra-batch duplicates
+      existingFingerprints.add(fingerprint);
+    }
+
+    if (toInsert.length === 0) {
+      return NextResponse.json({ success: true, syncedCount: 0 });
+    }
+
+    // Batch insert in chunks of 100 for reliability
+    const CHUNK_SIZE = 100;
+    let synced = 0;
+    for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
+      const chunk = toInsert.slice(i, i + CHUNK_SIZE);
+      const result = await withRetry(() =>
+        db.task.createMany({ data: chunk, skipDuplicates: true })
+      );
+      synced += result.count;
     }
 
     return NextResponse.json({ success: true, syncedCount: synced });
