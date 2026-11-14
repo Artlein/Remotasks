@@ -18,6 +18,7 @@ import {
   DEFAULT_SETTINGS,
   loadStoredTasks,
   saveStoredTasks,
+  syncLegacyTasksIfPresent,
   loadStoredProjects,
   saveStoredProjects,
   loadStoredSettings,
@@ -69,13 +70,25 @@ export default function DashboardPage() {
 
   // Hydrate from LocalStorage on mount so data is 100% instant and survives refresh
   useEffect(() => {
-    // Fetch current user and set window.__RT_USER_ID for namespaced localStorage
+    // Fetch current user and ensure all legacy logs are assigned to Arvin
     fetch('/api/auth/me')
       .then((r) => r.ok ? r.json() : null)
-      .then((user) => {
+      .then(async (user) => {
         if (user) {
           setCurrentUser(user);
           (window as any).__RT_USER_ID = user.id;
+          (window as any).__RT_USERNAME = user.username;
+
+          // If Arvin, sync any legacy local logs before to database under Arvin
+          if (user.username === 'arvin') {
+            await syncLegacyTasksIfPresent(user.id, user.username);
+          }
+
+          const userTasks = loadStoredTasks(user.id, user.username);
+          if (userTasks && userTasks.length > 0) {
+            setTasks(userTasks);
+          }
+          fetchTasks();
         }
       })
       .catch(() => {});
