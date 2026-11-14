@@ -144,8 +144,13 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (res.ok) {
-        if (typeof window !== 'undefined' && data.userId) {
-          (window as any).__RT_USER_ID = data.userId;
+        if (typeof window !== 'undefined') {
+          if (data.userId) (window as any).__RT_USER_ID = data.userId;
+          if (data.username) (window as any).__RT_USERNAME = data.username;
+          try {
+            if (data.userId) localStorage.setItem('remotasks_active_user_id', data.userId);
+            if (data.username) localStorage.setItem('remotasks_active_username', data.username);
+          } catch {}
         }
         router.push('/');
         router.refresh();

@@ -70,6 +70,16 @@ export default function DashboardPage() {
 
   // Hydrate from LocalStorage on mount so data is 100% instant and survives refresh
   useEffect(() => {
+    // 0. Restore user context immediately from local storage if returning user
+    if (typeof window !== 'undefined') {
+      try {
+        const savedId = localStorage.getItem('remotasks_active_user_id');
+        const savedName = localStorage.getItem('remotasks_active_username');
+        if (savedId) (window as any).__RT_USER_ID = savedId;
+        if (savedName) (window as any).__RT_USERNAME = savedName;
+      } catch {}
+    }
+
     // 1. Immediately hydrate from LocalStorage so data is 100% instant and offline-first
     const initialTasks = loadStoredTasks();
     if (initialTasks && initialTasks.length > 0) {
@@ -96,10 +106,19 @@ export default function DashboardPage() {
           setCurrentUser(user);
           (window as any).__RT_USER_ID = user.id;
           (window as any).__RT_USERNAME = user.username;
+          try {
+            localStorage.setItem('remotasks_active_user_id', user.id);
+            localStorage.setItem('remotasks_active_username', user.username);
+          } catch {}
 
           const userTasks = loadStoredTasks(user.id, user.username);
           if (userTasks && userTasks.length > 0) {
-            setTasks(userTasks);
+            setTasks((prev) => {
+              const map = new Map<string, TaskItem>();
+              userTasks.forEach((t) => map.set(t.id, t));
+              prev.forEach((t) => map.set(t.id, t));
+              return Array.from(map.values()).sort((a, b) => b.date.localeCompare(a.date));
+            });
           }
 
           // Run legacy sync non-blocking in background so UI renders instantly

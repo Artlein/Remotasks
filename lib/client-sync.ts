@@ -45,8 +45,27 @@ export const DEFAULT_SETTINGS: SystemSettingsItem = {
 
 const PERMANENT_VAULT_KEY = 'remotasks_tasks_permanent_vault';
 
+export function getSavedUserId(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    return localStorage.getItem('remotasks_active_user_id') || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function getSavedUsername(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    return localStorage.getItem('remotasks_active_username') || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function getStorageKeys(userId?: string) {
-  const suffix = userId ? `_${userId}` : '';
+  const effectiveId = userId || getSavedUserId();
+  const suffix = effectiveId ? `_${effectiveId}` : '';
   return {
     TASKS: `remotasks_tasks_v1${suffix}`,
     PROJECTS: `remotasks_projects_v1${suffix}`,
@@ -56,7 +75,7 @@ function getStorageKeys(userId?: string) {
 
 function STORAGE_KEYS() {
   if (typeof window === 'undefined') return getStorageKeys();
-  const userId = (window as any).__RT_USER_ID as string | undefined;
+  const userId = ((window as any).__RT_USER_ID as string | undefined) || getSavedUserId();
   return getStorageKeys(userId);
 }
 
@@ -67,7 +86,8 @@ function STORAGE_KEYS() {
 export function loadStoredTasks(overrideUserId?: string, overrideUsername?: string): TaskItem[] | null {
   if (typeof window === 'undefined') return null;
   try {
-    const activeUserId = overrideUserId || ((window as any).__RT_USER_ID as string | undefined);
+    const activeUserId = overrideUserId || ((window as any).__RT_USER_ID as string | undefined) || getSavedUserId();
+    const activeUsername = overrideUsername || ((window as any).__RT_USERNAME as string | undefined) || getSavedUsername();
     const keys = getStorageKeys(activeUserId);
 
     const taskMap = new Map<string, TaskItem>();
