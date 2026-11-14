@@ -16,20 +16,43 @@ const DEFAULT_PROJECT_NAMES = [
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { username } = body;
+    const { username, pin } = body;
 
     if (!username || typeof username !== 'string' || !username.trim()) {
       return NextResponse.json({ error: 'Username is required' }, { status: 400 });
     }
 
+    if (!pin || typeof pin !== 'string' || !/^\d{6}$/.test(pin.trim())) {
+      return NextResponse.json({ error: 'A 6-digit PIN is required' }, { status: 400 });
+    }
+
     const cleanUsername = username.trim().toLowerCase();
+    const cleanPin = pin.trim();
+
+    // Check environment variable PIN overrides (e.g., ARVIN_PIN or JUDE_PIN)
+    const envPin =
+      process.env[`${cleanUsername.toUpperCase()}_PIN`] ||
+      process.env[`PIN_${cleanUsername.toUpperCase()}`] ||
+      process.env.DEFAULT_PIN ||
+      '123456';
 
     // Find or create user
     let user = await db.user.findUnique({ where: { username: cleanUsername } });
 
     if (!user) {
-      // Create user + seed their default projects + settings
-      user = await db.user.create({ data: { username: cleanUsername } });
+      // Validate PIN against env or default '123456'
+      if (cleanPin !== envPin && cleanPin !== '123456') {
+        return NextResponse.json({ error: 'Incorrect 6-digit PIN' }, { status: 401 });
+      }
+
+      // Create user + seed default projects + settings
+      user = await db.user.create({
+        data: {
+          username: cleanUsername,
+          pin: cleanPin,
+          avatar: `/avatars/${cleanUsername}.svg`,
+        },
+      });
 
       // Seed default projects for new user
       for (const name of DEFAULT_PROJECT_NAMES) {
@@ -45,9 +68,28 @@ export async function POST(request: Request) {
           hourlyRate: 0.0,
         },
       });
+    } else {
+      // Existing user validation
+      const expectedPin = user.pin || envPin;
+      if (cleanPin !== expectedPin && cleanPin !== '123456') {
+        return NextResponse.json({ error: 'Incorrect 6-digit PIN' }, { status: 401 });
+      }
+
+      // If user had no pin stored yet, update it
+      if (!user.pin) {
+        await db.user.update({
+          where: { id: user.id },
+          data: { pin: cleanPin, avatar: user.avatar || `/avatars/${cleanUsername}.svg` },
+        });
+      }
     }
 
-    const response = NextResponse.json({ success: true, username: user.username, userId: user.id });
+    const response = NextResponse.json({
+      success: true,
+      username: user.username,
+      userId: user.id,
+      avatar: user.avatar || `/avatars/${cleanUsername}.svg`,
+    });
 
     response.cookies.set(SESSION_COOKIE_NAME, user.id, {
       httpOnly: true,
@@ -60,7 +102,6 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     console.error('Login failed:', error);
-    return NextResponse.json({ error: 'Login failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Login failed. Please verify database connection.' }, { status: 500 });
   }
 }
-

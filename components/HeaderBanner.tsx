@@ -17,7 +17,7 @@ interface HeaderBannerProps {
   hourlyRate: number;
   projectBreakdown: Record<string, number>;
   streakDays: number;
-  currentUser?: { id: string; username: string } | null;
+  currentUser?: { id: string; username: string; avatar?: string | null } | null;
   onOpenTaskModal: () => void;
   onOpenProjectModal: () => void;
   onOpenImportExportModal: () => void;
@@ -145,9 +145,16 @@ export function HeaderBanner({
           {/* User badge + logout */}
           {currentUser && (
             <div className="flex items-center gap-2 pl-1 border-l border-slate-800">
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs">
-                <User className="w-3.5 h-3.5 text-blue-400" />
-                <span className="font-semibold text-slate-200 capitalize">{currentUser.username}</span>
+              <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs shadow-inner">
+                <div className="relative w-5 h-5 rounded-full overflow-hidden shrink-0 border border-slate-700 bg-slate-800">
+                  <Image
+                    src={currentUser.avatar || `/avatars/${currentUser.username.toLowerCase()}.svg`}
+                    alt={currentUser.username}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+                <span className="font-bold text-slate-200 capitalize">{currentUser.username}</span>
               </div>
               <button
                 onClick={handleLogout}

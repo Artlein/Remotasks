@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="100%" height="100%">
+  <defs>
+    <linearGradient id="judeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6" />
+      <stop offset="50%" stop-color="#6D28D9" />
+      <stop offset="100%" stop-color="#31104B" />
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="64" fill="url(#judeGrad)" />
+  <!-- Avatar Silhouette / Stylized Portrait -->
+  <circle cx="64" cy="48" r="24" fill="#A78BFA" opacity="0.9" />
+  <path d="M64 48 C48 48 40 32 40 26 C40 18 50 14 64 14 C78 14 88 18 88 26 C88 32 80 48 64 48 Z" fill="#4C1D95" />
+  <circle cx="64" cy="50" r="18" fill="#FBBF24" />
+  <path d="M46 42 C50 36 56 34 64 34 C72 34 78 36 82 42 C78 39 72 38 64 38 C56 38 50 39 46 42 Z" fill="#312E81" />
+  <!-- Body / Shoulders -->
+  <path d="M26 112 C26 90 42 78 64 78 C86 78 102 90 102 112 Z" fill="#7C3AED" />
+  <path d="M44 88 L64 104 L84 88 Z" fill="#C4B5FD" opacity="0.8" />
+  <!-- Status Badge -->
+  <circle cx="98" cy="98" r="14" fill="#06B6D4" stroke="#0F172A" stroke-width="3" />
+  <path d="M94 98 L97 101 L103 95" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+</svg>

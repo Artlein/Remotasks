@@ -36,7 +36,7 @@ interface Project {
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<'log' | 'daily' | 'weekly' | 'analytics'>('log');
-  const [currentUser, setCurrentUser] = useState<{ id: string; username: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: string; username: string; avatar?: string | null } | null>(null);
 
   // Settings State
   const [cutoffHour, setCutoffHour] = useState<number>(DEFAULT_SETTINGS.logicalCutoffHour);

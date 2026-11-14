@@ -6,6 +6,7 @@ const SESSION_COOKIE = 'rt_session';
 export interface SessionUser {
   id: string;
   username: string;
+  avatar?: string | null;
 }
 
 /**
@@ -20,7 +21,11 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     const user = await db.user.findUnique({ where: { id: userId } });
     if (!user) return null;
 
-    return { id: user.id, username: user.username };
+    return {
+      id: user.id,
+      username: user.username,
+      avatar: user.avatar || `/avatars/${user.username.toLowerCase()}.svg`,
+    };
   } catch {
     return null;
   }
@@ -30,4 +35,3 @@ export async function getSessionUser(): Promise<SessionUser | null> {
  * Returns the session cookie name (used by API routes and middleware).
  */
 export const SESSION_COOKIE_NAME = SESSION_COOKIE;
-
