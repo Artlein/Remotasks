@@ -251,6 +251,7 @@ export default function LoginPage() {
                         fill
                         className="object-cover"
                         priority
+                        unoptimized
                       />
                     </div>
                   </div>
@@ -315,6 +316,7 @@ export default function LoginPage() {
                     fill
                     className="object-cover"
                     priority
+                    unoptimized
                   />
                 </div>
                 <div className="absolute -bottom-1 -right-1 p-1.5 rounded-full bg-blue-600 text-white shadow-md border-2 border-slate-950">

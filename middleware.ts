@@ -18,6 +18,7 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/favicon') ||
     pathname.startsWith('/logo') ||
     pathname.startsWith('/icon') ||
+    pathname.startsWith('/avatars') ||
     pathname.startsWith('/manifest') ||
     pathname.startsWith('/sw.js')
   ) {

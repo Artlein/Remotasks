@@ -152,6 +152,7 @@ export function HeaderBanner({
                     alt={currentUser.username}
                     fill
                     className="object-cover"
+                    unoptimized
                   />
                 </div>
                 <span className="font-bold text-slate-200 capitalize">{currentUser.username}</span>
