@@ -88,10 +88,10 @@ export default function DashboardPage() {
       setProjects(storedProjects);
     }
 
-    // 2. Fetch current user and ensure all legacy logs are assigned to Arvin
+    // 2. Fetch current user and sync in background without blocking UI
     fetch('/api/auth/me')
       .then((r) => (r.ok ? r.json() : null))
-      .then(async (user) => {
+      .then((user) => {
         if (user) {
           setCurrentUser(user);
           (window as any).__RT_USER_ID = user.id;
@@ -102,12 +102,10 @@ export default function DashboardPage() {
             setTasks(userTasks);
           }
 
-          // If Arvin, sync any legacy local logs before to database under Arvin
+          // Run legacy sync non-blocking in background so UI renders instantly
           if (user.username === 'arvin') {
-            await syncLegacyTasksIfPresent(user.id, user.username);
+            syncLegacyTasksIfPresent(user.id, user.username).catch(() => {});
           }
-
-          fetchTasks();
         }
       })
       .catch(() => {});
