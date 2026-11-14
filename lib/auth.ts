@@ -1,7 +1,8 @@
 import { cookies } from 'next/headers';
 import { db } from '@/lib/db';
+import { SESSION_COOKIE_NAME } from '@/lib/constants';
 
-const SESSION_COOKIE = 'rt_session';
+export { SESSION_COOKIE_NAME };
 
 export interface SessionUser {
   id: string;
@@ -15,7 +16,7 @@ export interface SessionUser {
 export async function getSessionUser(): Promise<SessionUser | null> {
   try {
     const cookieStore = await cookies();
-    const userId = cookieStore.get(SESSION_COOKIE)?.value;
+    const userId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
     if (!userId) return null;
 
     const user = await db.user.findUnique({ where: { id: userId } });
@@ -30,8 +31,3 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     return null;
   }
 }
-
-/**
- * Returns the session cookie name (used by API routes and middleware).
- */
-export const SESSION_COOKIE_NAME = SESSION_COOKIE;
