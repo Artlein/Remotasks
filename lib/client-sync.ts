@@ -91,7 +91,6 @@ export function loadStoredTasks(overrideUserId?: string, overrideUsername?: stri
     const keys = getStorageKeys(activeUserId);
 
     const taskMap = new Map<string, TaskItem>();
-    const fingerprintMap = new Map<string, TaskItem>();
 
     const collectTasks = (rawJson: string | null) => {
       if (!rawJson) return;
@@ -111,10 +110,9 @@ export function loadStoredTasks(overrideUserId?: string, overrideUsername?: stri
                 notes: item.notes ? String(item.notes) : null,
               };
 
-              const fp = `${task.date}|${task.description}|${task.durationMinutes}`;
-              if (!taskMap.has(task.id) && !fingerprintMap.has(fp)) {
+              // Deduplicate ONLY by unique task ID so identical audits (same duration/desc) are never discarded!
+              if (!taskMap.has(task.id)) {
                 taskMap.set(task.id, task);
-                fingerprintMap.set(fp, task);
               }
             }
           }

@@ -40,11 +40,8 @@ export async function POST(request: Request) {
       })
     );
 
-    // Build a de-dup set: by ID and by (date+description+duration) fingerprint
+    // Build a de-dup set by ID
     const existingIds = new Set(existingTasks.map((t) => t.id));
-    const existingFingerprints = new Set(
-      existingTasks.map((t) => `${t.date}|${t.description}|${t.durationMinutes}`)
-    );
 
     // Prepare tasks to insert
     type TaskRow = {
@@ -63,10 +60,9 @@ export async function POST(request: Request) {
       if (durationMinutes <= 0 || !task.date) continue;
 
       const description = (task.description && String(task.description).trim()) || 'Audit Task';
-      const fingerprint = `${task.date}|${description}|${durationMinutes}`;
 
-      // Skip if already in DB by ID or fingerprint
-      if (existingIds.has(task.id) || existingFingerprints.has(fingerprint)) continue;
+      // Skip if already in DB by unique ID
+      if (existingIds.has(task.id)) continue;
 
       const projName = task.project?.name || 'Aloha_OTS';
       let projectId = projectMap.get(projName.toLowerCase());
@@ -90,8 +86,8 @@ export async function POST(request: Request) {
         notes: task.notes || null,
       });
 
-      // Track fingerprint to avoid intra-batch duplicates
-      existingFingerprints.add(fingerprint);
+      // Track ID in batch to avoid intra-batch duplicates
+      existingIds.add(task.id);
     }
 
     if (toInsert.length === 0) {
