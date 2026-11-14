@@ -2,9 +2,19 @@ import { PrismaClient } from '@prisma/client';
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
+const POOLER_DATABASE_URL =
+  'postgresql://postgres.utkethetueyzglldzhcp:%40Angpogikosobra25@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true';
+
+const dbUrl = process.env.DATABASE_URL || POOLER_DATABASE_URL;
+
 export const db =
   globalForPrisma.prisma ||
   new PrismaClient({
+    datasources: {
+      db: {
+        url: dbUrl,
+      },
+    },
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   });
 

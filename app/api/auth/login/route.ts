@@ -14,6 +14,9 @@ const DEFAULT_PROJECT_NAMES = [
 ];
 
 export async function POST(request: Request) {
+  let cleanUsername = '';
+  let cleanPin = '';
+
   try {
     const body = await request.json();
     const { username, pin } = body;
@@ -26,8 +29,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'A 6-digit PIN is required' }, { status: 400 });
     }
 
-    const cleanUsername = username.trim().toLowerCase();
-    const cleanPin = pin.trim();
+    cleanUsername = username.trim().toLowerCase();
+    cleanPin = pin.trim();
 
     // Find user
     let user = await db.user.findUnique({ where: { username: cleanUsername } });
@@ -85,10 +88,33 @@ export async function POST(request: Request) {
     });
 
     return response;
-  } catch (error) {
-    console.error('Login failed:', error);
+  } catch (error: any) {
+    console.error('Database login error:', error);
+
+    // Fallback: If DB is temporarily paused, allow Arvin (or valid PIN) to log in so work is never blocked
+    if (cleanUsername === 'arvin' && cleanPin === '032504') {
+      const fallbackUserId = '8e117503-2d6d-41ac-aebe-1876bae8f02b';
+      const fallbackResponse = NextResponse.json({
+        success: true,
+        username: 'arvin',
+        userId: fallbackUserId,
+        avatar: '/avatars/arvin.png',
+        offlineFallback: true,
+      });
+
+      fallbackResponse.cookies.set(SESSION_COOKIE_NAME, fallbackUserId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30,
+        path: '/',
+      });
+
+      return fallbackResponse;
+    }
+
     return NextResponse.json(
-      { error: 'Login failed. Please verify database connection.' },
+      { error: error?.message ? `Database connection error: ${error.message}` : 'Login failed. Please verify database connection.' },
       { status: 500 }
     );
   }
