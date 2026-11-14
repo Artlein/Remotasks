@@ -195,37 +195,37 @@ export function TaskLogTable({
         return (
           <button
             onClick={onClick}
-            className="px-3 py-1 rounded-lg text-sm font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 inline-flex items-center gap-1.5 hover:bg-emerald-500/20 transition cursor-pointer"
+            className="px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 inline-flex items-center gap-1.5 hover:bg-emerald-500/20 transition cursor-pointer"
             title="Click to toggle status (Done -> Review -> Pending)"
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-400" /> Done
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Done
           </button>
         );
       case 'Review':
         return (
           <button
             onClick={onClick}
-            className="px-3 py-1 rounded-lg text-sm font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/25 inline-flex items-center gap-1.5 hover:bg-amber-500/20 transition cursor-pointer"
+            className="px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/25 inline-flex items-center gap-1.5 hover:bg-amber-500/20 transition cursor-pointer"
             title="Click to toggle status (Review -> Pending -> Done)"
           >
-            <span className="w-2 h-2 rounded-full bg-amber-400" /> Review
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" /> Review
           </button>
         );
       case 'Pending':
         return (
           <button
             onClick={onClick}
-            className="px-3 py-1 rounded-lg text-sm font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/25 inline-flex items-center gap-1.5 hover:bg-slate-500/20 transition cursor-pointer"
+            className="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-500/10 text-slate-400 border border-slate-500/25 inline-flex items-center gap-1.5 hover:bg-slate-500/20 transition cursor-pointer"
             title="Click to toggle status (Pending -> Done -> Review)"
           >
-            <span className="w-2 h-2 rounded-full bg-slate-400" /> Pending
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" /> Pending
           </button>
         );
       default:
         return (
           <button
             onClick={onClick}
-            className="px-3 py-1 rounded-lg text-sm font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/25 cursor-pointer"
+            className="px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/25 cursor-pointer"
           >
             {status}
           </button>
@@ -239,11 +239,11 @@ export function TaskLogTable({
     <div className="space-y-5">
       {/* 1. Fast-Log Bar */}
       <div className="skeuo-panel p-4 bg-gradient-to-r from-slate-900 via-slate-900/90 to-slate-950">
-        <div className="flex items-center justify-between mb-2.5">
+        <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Zap className="w-4 h-4 text-amber-400" />
-            <span className="text-sm font-bold text-white uppercase tracking-wider">Fast-Log Task</span>
-            <span className="text-xs text-slate-400">Target Date: <strong className="text-slate-200">{selectedDateStr}</strong></span>
+            <span className="text-xs font-bold text-white uppercase tracking-wider">Fast-Log Task</span>
+            <span className="text-[11px] text-slate-400">Target Date: <strong className="text-slate-200">{selectedDateStr}</strong></span>
           </div>
 
           {fastError && (
@@ -258,7 +258,7 @@ export function TaskLogTable({
           <select
             value={fastProjectId}
             onChange={(e) => setFastProjectId(e.target.value)}
-            className="glass-input text-sm bg-slate-900 py-2.5 w-full sm:w-[160px] shrink-0 cursor-pointer"
+            className="glass-input text-xs bg-slate-900 py-2 w-full sm:w-[150px] shrink-0 cursor-pointer"
             required
           >
             {activeProjects.map((p) => (
@@ -274,7 +274,7 @@ export function TaskLogTable({
             value={fastDescription}
             onChange={(e) => setFastDescription(e.target.value)}
             placeholder="Type task description and hit Enter..."
-            className="glass-input text-sm py-2.5 flex-1 w-full"
+            className="glass-input text-xs py-2 flex-1 w-full"
             required
           />
 
@@ -284,7 +284,7 @@ export function TaskLogTable({
             value={fastDurationStr}
             onChange={(e) => setFastDurationStr(e.target.value)}
             placeholder="e.g. 20m or 45"
-            className="glass-input text-sm py-2.5 font-mono w-full sm:w-[120px] shrink-0"
+            className="glass-input text-xs py-2 font-mono w-full sm:w-[110px] shrink-0"
             required
           />
 
@@ -292,7 +292,7 @@ export function TaskLogTable({
           <select
             value={fastStatus}
             onChange={(e) => setFastStatus(e.target.value)}
-            className="glass-input text-sm bg-slate-900 py-2.5 w-full sm:w-[110px] shrink-0 cursor-pointer"
+            className="glass-input text-xs bg-slate-900 py-2 w-full sm:w-[100px] shrink-0 cursor-pointer"
           >
             <option value="Done" className="bg-slate-900 text-emerald-400">Done</option>
             <option value="Review" className="bg-slate-900 text-amber-400">Review</option>
@@ -303,9 +303,9 @@ export function TaskLogTable({
           <button
             type="submit"
             disabled={isFastSubmitting}
-            className="skeuo-button px-4.5 py-2.5 text-sm font-bold shrink-0 w-full sm:w-auto flex items-center justify-center gap-1.5 disabled:opacity-50"
+            className="skeuo-button px-4 py-2 text-xs font-semibold shrink-0 w-full sm:w-auto flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
-            <Plus className="w-4 h-4 stroke-[2.5]" /> Add
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" /> Add
           </button>
         </form>
       </div>
@@ -315,7 +315,7 @@ export function TaskLogTable({
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-blue-400" />
-            <span className="text-sm font-bold text-slate-200 uppercase tracking-wider">
+            <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
               Task Log ({tasks.length} entries — {totalHours.toFixed(2)}h)
             </span>
           </div>
@@ -332,14 +332,14 @@ export function TaskLogTable({
                   setCurrentPage(1);
                 }}
                 placeholder="Search tasks..."
-                className="w-full glass-input text-sm !pl-9.5 !pr-8 py-2"
+                className="w-full glass-input text-xs !pl-9.5 !pr-8 py-2"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
                 >
-                  <XCircle className="w-4 h-4" />
+                  <XCircle className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
@@ -351,7 +351,7 @@ export function TaskLogTable({
                 setSelectedProjectId(e.target.value);
                 setCurrentPage(1);
               }}
-              className="glass-input text-sm bg-slate-900 py-2 min-w-[140px] cursor-pointer"
+              className="glass-input text-xs bg-slate-900 py-2 min-w-[140px] cursor-pointer"
             >
               <option value="ALL">All Projects</option>
               {filterProjects.map((p) => (
@@ -368,7 +368,7 @@ export function TaskLogTable({
                 setSelectedStatus(e.target.value);
                 setCurrentPage(1);
               }}
-              className="glass-input text-sm bg-slate-900 py-2 cursor-pointer"
+              className="glass-input text-xs bg-slate-900 py-2 cursor-pointer"
             >
               <option value="ALL">All Statuses</option>
               <option value="Done">Done</option>
@@ -377,30 +377,30 @@ export function TaskLogTable({
             </select>
 
             {/* Date Range Picker */}
-            <div className="flex items-center gap-1.5 bg-slate-950/70 px-3 py-1.5 rounded-lg border border-slate-800 text-sm">
-              <Calendar className="w-4 h-4 text-blue-400 shrink-0" />
+            <div className="flex items-center gap-1.5 bg-slate-950/70 px-3 py-1.5 rounded-lg border border-slate-800 text-xs">
+              <Calendar className="w-3.5 h-3.5 text-blue-400 shrink-0" />
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="bg-transparent text-sm text-slate-300 focus:outline-none w-[120px]"
+                className="bg-transparent text-xs text-slate-300 focus:outline-none w-[110px]"
               />
               <span className="text-slate-500 font-medium">to</span>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="bg-transparent text-sm text-slate-300 focus:outline-none w-[120px]"
+                className="bg-transparent text-xs text-slate-300 focus:outline-none w-[110px]"
               />
             </div>
 
             {hasActiveFilters && (
               <button
                 onClick={onResetFilters}
-                className="px-3 py-1.5 rounded-lg text-sm font-semibold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-400 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition flex items-center gap-1"
                 title="Clear all filters"
               >
-                <RefreshCw className="w-3.5 h-3.5" /> Clear
+                <RefreshCw className="w-3 h-3" /> Clear
               </button>
             )}
           </div>

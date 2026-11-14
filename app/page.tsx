@@ -335,13 +335,13 @@ export default function DashboardPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2.5 px-4.5 py-2.5 rounded-xl text-sm sm:text-base font-semibold transition-all whitespace-nowrap ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all whitespace-nowrap ${
                   isActive
                     ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 shadow-sm'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
                 }`}
               >
-                <Icon className="w-4.5 h-4.5" />
+                <Icon className="w-4 h-4" />
                 {tab.label}
               </button>
             );
@@ -370,9 +370,9 @@ export default function DashboardPage() {
               setEditingTask(null);
               setIsTaskModalOpen(true);
             }}
-            className="hidden sm:flex items-center gap-2 skeuo-button px-4 py-2 text-xs sm:text-sm font-bold"
+            className="hidden sm:flex items-center gap-1.5 skeuo-button px-3.5 py-1.5 text-xs font-semibold"
           >
-            <Plus className="w-4 h-4 stroke-[2.5]" /> Log Task
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" /> Log Task
           </button>
         </div>
       </div>
