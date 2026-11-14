@@ -1,20 +1,40 @@
 import { PrismaClient } from '@prisma/client';
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
-
-// Supabase IPv4 pooler — works from Vercel serverless (IPv4-only)
-// Direct host (db.xxx.supabase.co) is IPv6-only and breaks on Vercel
-const POOLER_DATABASE_URL =
+const DEFAULT_POOLER_URL =
   'postgresql://postgres.utkethetueyzglldzhcp:%40Angpogikosobra25@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=5&pool_timeout=15&connect_timeout=15';
 
-const dbUrl = process.env.DATABASE_URL || POOLER_DATABASE_URL;
+const DEFAULT_DIRECT_URL =
+  'postgresql://postgres.utkethetueyzglldzhcp:%40Angpogikosobra25@aws-0-ap-northeast-1.pooler.supabase.com:5432/postgres';
+
+function sanitizeDbUrl(raw: string | undefined, fallback: string): string {
+  if (!raw) return fallback;
+  let s = raw.trim();
+  // Strip surrounding quotes if pasted with quotes in Vercel UI
+  if (
+    (s.startsWith('"') && s.endsWith('"')) ||
+    (s.startsWith("'") && s.endsWith("'"))
+  ) {
+    s = s.slice(1, -1).trim();
+  }
+  // Validate protocol
+  if (!s.startsWith('postgresql://') && !s.startsWith('postgres://')) {
+    return fallback;
+  }
+  return s;
+}
+
+// Sanitize process.env directly so Prisma's schema.prisma env("DATABASE_URL") is valid
+process.env.DATABASE_URL = sanitizeDbUrl(process.env.DATABASE_URL, DEFAULT_POOLER_URL);
+process.env.DIRECT_URL = sanitizeDbUrl(process.env.DIRECT_URL, DEFAULT_DIRECT_URL);
+
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 export const db =
   globalForPrisma.prisma ||
   new PrismaClient({
     datasources: {
       db: {
-        url: dbUrl,
+        url: process.env.DATABASE_URL,
       },
     },
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
