@@ -1,28 +1,29 @@
 import { NextResponse } from 'next/server';
-import { db, seedInitialDataIfNeeded } from '@/lib/db';
+import { db, seedUserDataIfNeeded } from '@/lib/db';
+import { getSessionUser } from '@/lib/auth';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    await seedInitialDataIfNeeded();
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-    let settings = await db.systemSettings.findUnique({
-      where: { id: 'default' },
-    });
+    await seedUserDataIfNeeded(user.id);
+
+    let settings = await db.userSettings.findUnique({ where: { userId: user.id } });
 
     if (!settings) {
-      settings = await db.systemSettings.create({
-        data: {
-          id: 'default',
-          logicalCutoffHour: 0, // default 12:00 AM reset
-          dailyTargetHours: 8.0,
-          hourlyRate: 0.0,
-        },
+      settings = await db.userSettings.create({
+        data: { userId: user.id, logicalCutoffHour: 0, dailyTargetHours: 8.0, hourlyRate: 0.0 },
       });
     }
 
-    return NextResponse.json(settings);
+    return NextResponse.json({
+      logicalCutoffHour: settings.logicalCutoffHour,
+      dailyTargetHours: settings.dailyTargetHours,
+      hourlyRate: settings.hourlyRate,
+    });
   } catch (error) {
     console.error('Failed to fetch settings:', error);
     return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
@@ -31,7 +32,10 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    await seedInitialDataIfNeeded();
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+    await seedUserDataIfNeeded(user.id);
     const body = await request.json();
     const { logicalCutoffHour, dailyTargetHours, hourlyRate } = body;
 
@@ -40,20 +44,18 @@ export async function POST(request: Request) {
     if (typeof logicalCutoffHour === 'number' && logicalCutoffHour >= 0 && logicalCutoffHour <= 23) {
       updateData.logicalCutoffHour = Math.floor(logicalCutoffHour);
     }
-
     if (typeof dailyTargetHours === 'number' && dailyTargetHours > 0) {
       updateData.dailyTargetHours = parseFloat(dailyTargetHours.toFixed(2));
     }
-
     if (typeof hourlyRate === 'number' && hourlyRate >= 0) {
       updateData.hourlyRate = parseFloat(hourlyRate.toFixed(2));
     }
 
-    const updated = await db.systemSettings.upsert({
-      where: { id: 'default' },
+    const updated = await db.userSettings.upsert({
+      where: { userId: user.id },
       update: updateData,
       create: {
-        id: 'default',
+        userId: user.id,
         logicalCutoffHour: updateData.logicalCutoffHour ?? 0,
         dailyTargetHours: updateData.dailyTargetHours ?? 8.0,
         hourlyRate: updateData.hourlyRate ?? 0.0,

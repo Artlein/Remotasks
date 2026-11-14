@@ -1,49 +1,46 @@
 import { NextResponse } from 'next/server';
-import { db, seedInitialDataIfNeeded } from '@/lib/db';
+import { db, seedUserDataIfNeeded } from '@/lib/db';
 import { parseISO, startOfWeek, endOfWeek, format } from 'date-fns';
-export const dynamic = "force-dynamic";
+import { getSessionUser } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    await seedInitialDataIfNeeded();
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-    const settings = await db.systemSettings.findUnique({ where: { id: 'default' } });
+    await seedUserDataIfNeeded(user.id);
+
+    const settings = await db.userSettings.findUnique({ where: { userId: user.id } });
     const dailyTarget = settings?.dailyTargetHours ?? 8.0;
-    const weeklyTarget = dailyTarget * 5; // 40h target baseline
+    const weeklyTarget = dailyTarget * 5;
 
     const projects = await db.project.findMany({
+      where: { userId: user.id },
       orderBy: { name: 'asc' },
     });
 
     const tasks = await db.task.findMany({
+      where: { userId: user.id },
       include: { project: true },
       orderBy: { date: 'desc' },
     });
 
-    // Group tasks by Remotasks workweek: Tuesday to Monday (weekStartsOn: 2)
     const weeklyMap: Record<string, { weekLabel: string; startDate: string; endDate: string; breakdown: Record<string, number>; totalMinutes: number; taskCount: number }> = {};
 
     for (const task of tasks) {
       const taskDate = parseISO(task.date);
       if (isNaN(taskDate.getTime())) continue;
 
-      const weekStart = startOfWeek(taskDate, { weekStartsOn: 2 }); // Tuesday
-      const weekEnd = endOfWeek(taskDate, { weekStartsOn: 2 }); // Monday
-
+      const weekStart = startOfWeek(taskDate, { weekStartsOn: 2 });
+      const weekEnd = endOfWeek(taskDate, { weekStartsOn: 2 });
       const weekStartKey = format(weekStart, 'yyyy-MM-dd');
       const weekEndKey = format(weekEnd, 'yyyy-MM-dd');
       const label = `${format(weekStart, 'EEE, MMM d')} - ${format(weekEnd, 'EEE, MMM d, yyyy')}`;
 
       if (!weeklyMap[weekStartKey]) {
-        weeklyMap[weekStartKey] = {
-          weekLabel: label,
-          startDate: weekStartKey,
-          endDate: weekEndKey,
-          breakdown: {},
-          totalMinutes: 0,
-          taskCount: 0,
-        };
+        weeklyMap[weekStartKey] = { weekLabel: label, startDate: weekStartKey, endDate: weekEndKey, breakdown: {}, totalMinutes: 0, taskCount: 0 };
       }
 
       const projName = task.project?.name || 'Unknown';
@@ -57,7 +54,6 @@ export async function GET() {
     const rows = weekKeys.map((weekKey) => {
       const item = weeklyMap[weekKey];
       const totalHours = Math.round((item.totalMinutes / 60) * 100) / 100;
-
       return {
         weekStartKey: weekKey,
         weekLabel: item.weekLabel,

@@ -1,17 +1,21 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { parseDurationToMinutes } from '@/lib/logical-day';
+import { getSessionUser } from '@/lib/auth';
 
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
     const { id } = await params;
     const body = await request.json();
     const { date, projectId, description, durationStr, durationMinutes, status, notes } = body;
 
-    const existingTask = await db.task.findUnique({ where: { id } });
+    const existingTask = await db.task.findFirst({ where: { id, userId: user.id } });
     if (!existingTask) {
       return NextResponse.json({ error: 'Task not found' }, { status: 404 });
     }
@@ -28,17 +32,13 @@ export async function PUT(
       updateData.durationMinutes = Math.round(durationMinutes);
     } else if (durationStr) {
       const parsed = parseDurationToMinutes(durationStr);
-      if (parsed > 0) {
-        updateData.durationMinutes = parsed;
-      }
+      if (parsed > 0) updateData.durationMinutes = parsed;
     }
 
     const updatedTask = await db.task.update({
       where: { id },
       data: updateData,
-      include: {
-        project: true,
-      },
+      include: { project: true },
     });
 
     return NextResponse.json(updatedTask);
@@ -53,10 +53,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
     const { id } = await params;
 
-    await db.task.delete({ where: { id } });
+    const existingTask = await db.task.findFirst({ where: { id, userId: user.id } });
+    if (!existingTask) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 404 });
+    }
 
+    await db.task.delete({ where: { id } });
     return NextResponse.json({ success: true, id });
   } catch (error) {
     console.error('Failed to delete task:', error);

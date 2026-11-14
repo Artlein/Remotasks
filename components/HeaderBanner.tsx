@@ -1,10 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Clock, Target, Calendar, Plus, Download, FolderPlus, Settings, ChevronLeft, ChevronRight, Flame, Sparkles, DollarSign } from 'lucide-react';
+import { Clock, Target, Calendar, Plus, Download, FolderPlus, Settings, ChevronLeft, ChevronRight, Flame, Sparkles, DollarSign, User, LogOut } from 'lucide-react';
 import { formatMinutesToFriendly, formatMinutesToDecimal } from '@/lib/logical-day';
 import { addDays, subDays, parseISO, format } from 'date-fns';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 interface HeaderBannerProps {
   todayDateStr: string;
@@ -16,6 +17,7 @@ interface HeaderBannerProps {
   hourlyRate: number;
   projectBreakdown: Record<string, number>;
   streakDays: number;
+  currentUser?: { id: string; username: string } | null;
   onOpenTaskModal: () => void;
   onOpenProjectModal: () => void;
   onOpenImportExportModal: () => void;
@@ -32,11 +34,19 @@ export function HeaderBanner({
   hourlyRate,
   projectBreakdown,
   streakDays,
+  currentUser,
   onOpenTaskModal,
   onOpenProjectModal,
   onOpenImportExportModal,
   onOpenSettingsModal,
 }: HeaderBannerProps) {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.push('/login');
+    router.refresh();
+  };
   const todayHours = formatMinutesToDecimal(todayMinutes);
   const targetMinutes = dailyTargetHours * 60;
   const progressPercent = Math.min(100, Math.round((todayMinutes / targetMinutes) * 100));
@@ -131,6 +141,23 @@ export function HeaderBanner({
           >
             <Settings className="w-4 h-4" />
           </button>
+
+          {/* User badge + logout */}
+          {currentUser && (
+            <div className="flex items-center gap-2 pl-1 border-l border-slate-800">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs">
+                <User className="w-3.5 h-3.5 text-blue-400" />
+                <span className="font-semibold text-slate-200 capitalize">{currentUser.username}</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="skeuo-button-secondary p-2.5 text-slate-400 hover:text-red-400 transition-colors"
+                title="Sign out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

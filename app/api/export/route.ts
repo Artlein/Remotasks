@@ -2,15 +2,19 @@ import { NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { db } from '@/lib/db';
 import { formatMinutesToDuration, formatMinutesToDecimal } from '@/lib/logical-day';
+import { getSessionUser } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
     const { searchParams } = new URL(request.url);
     const formatType = searchParams.get('format') || 'xlsx';
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    const where: any = {};
+    const where: any = { userId: user.id };
     if (startDate && endDate) {
       where.date = { gte: startDate, lte: endDate };
     } else if (startDate) {
@@ -36,16 +40,8 @@ export async function GET(request: Request) {
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportRows);
-    
-    // Set auto column widths
     const colWidths = [
-      { wch: 12 }, // Date
-      { wch: 18 }, // Project
-      { wch: 40 }, // Task Description
-      { wch: 15 }, // Duration (H:MM)
-      { wch: 16 }, // Duration (Hours)
-      { wch: 12 }, // Status
-      { wch: 30 }, // Notes
+      { wch: 12 }, { wch: 18 }, { wch: 40 }, { wch: 15 }, { wch: 16 }, { wch: 12 }, { wch: 30 },
     ];
     worksheet['!cols'] = colWidths;
 
@@ -57,7 +53,7 @@ export async function GET(request: Request) {
       return new NextResponse(csvBuffer, {
         headers: {
           'Content-Type': 'text/csv',
-          'Content-Disposition': `attachment; filename="remotasks_timesheet_${new Date().toISOString().slice(0, 10)}.csv"`,
+          'Content-Disposition': `attachment; filename="remotasks_timesheet_${user.username}_${new Date().toISOString().slice(0, 10)}.csv"`,
         },
       });
     }
@@ -66,7 +62,7 @@ export async function GET(request: Request) {
     return new NextResponse(xlsxBuffer, {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="remotasks_timesheet_${new Date().toISOString().slice(0, 10)}.xlsx"`,
+        'Content-Disposition': `attachment; filename="remotasks_timesheet_${user.username}_${new Date().toISOString().slice(0, 10)}.xlsx"`,
       },
     });
   } catch (error) {

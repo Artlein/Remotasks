@@ -36,6 +36,7 @@ interface Project {
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<'log' | 'daily' | 'weekly' | 'analytics'>('log');
+  const [currentUser, setCurrentUser] = useState<{ id: string; username: string } | null>(null);
 
   // Settings State
   const [cutoffHour, setCutoffHour] = useState<number>(DEFAULT_SETTINGS.logicalCutoffHour);
@@ -68,6 +69,17 @@ export default function DashboardPage() {
 
   // Hydrate from LocalStorage on mount so data is 100% instant and survives refresh
   useEffect(() => {
+    // Fetch current user and set window.__RT_USER_ID for namespaced localStorage
+    fetch('/api/auth/me')
+      .then((r) => r.ok ? r.json() : null)
+      .then((user) => {
+        if (user) {
+          setCurrentUser(user);
+          (window as any).__RT_USER_ID = user.id;
+        }
+      })
+      .catch(() => {});
+
     const storedSettings = loadStoredSettings();
     if (storedSettings) {
       setCutoffHour(storedSettings.logicalCutoffHour ?? 0);
@@ -285,6 +297,7 @@ export default function DashboardPage() {
         hourlyRate={hourlyRate}
         projectBreakdown={selectedDayProjectBreakdown}
         streakDays={calculateStreak()}
+        currentUser={currentUser}
         onOpenTaskModal={() => {
           setEditingTask(null);
           setIsTaskModalOpen(true);

@@ -1,45 +1,44 @@
 import { NextResponse } from 'next/server';
-import { db, seedInitialDataIfNeeded, DEFAULT_PROJECT_NAMES } from '@/lib/db';
+import { db, seedUserDataIfNeeded, DEFAULT_PROJECT_NAMES } from '@/lib/db';
+import { getSessionUser } from '@/lib/auth';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    await seedInitialDataIfNeeded();
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+    await seedUserDataIfNeeded(user.id);
 
     const { searchParams } = new URL(request.url);
     const includeInactive = searchParams.get('all') === 'true';
 
     let projects = await db.project.findMany({
-      where: includeInactive ? {} : { active: true },
+      where: includeInactive ? { userId: user.id } : { userId: user.id, active: true },
       orderBy: { name: 'asc' },
     });
 
     if (projects.length === 0) {
       for (const name of DEFAULT_PROJECT_NAMES) {
         try {
-          await db.project.upsert({
-            where: { name },
-            update: { active: true },
-            create: { name, active: true },
-          });
-        } catch (e) {
-          // ignore in case of read-only mode
+          await db.project.create({ data: { name, active: true, userId: user.id } });
+        } catch {
+          // ignore duplicates
         }
       }
-
       projects = await db.project.findMany({
-        where: includeInactive ? {} : { active: true },
+        where: includeInactive ? { userId: user.id } : { userId: user.id, active: true },
         orderBy: { name: 'asc' },
       });
     }
 
-    // If still 0 due to any environment constraint, return fallback array
     if (projects.length === 0) {
       projects = DEFAULT_PROJECT_NAMES.map((name, idx) => ({
         id: `default-${idx + 1}`,
         name,
         active: true,
+        userId: user.id,
         createdAt: new Date(),
         updatedAt: new Date(),
       })) as any;
@@ -48,7 +47,6 @@ export async function GET(request: Request) {
     return NextResponse.json(projects);
   } catch (error) {
     console.error('Failed to fetch projects:', error);
-    // Return guaranteed fallback list so UI dropdowns are never blank
     const fallbackProjects = DEFAULT_PROJECT_NAMES.map((name, idx) => ({
       id: `default-${idx + 1}`,
       name,
@@ -62,7 +60,10 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await seedInitialDataIfNeeded();
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+    await seedUserDataIfNeeded(user.id);
     const body = await request.json();
     const { name } = body;
 
@@ -72,14 +73,12 @@ export async function POST(request: Request) {
 
     const trimmedName = name.trim();
 
-    // Check if project already exists
     const existing = await db.project.findUnique({
-      where: { name: trimmedName },
+      where: { name_userId: { name: trimmedName, userId: user.id } },
     });
 
     if (existing) {
       if (!existing.active) {
-        // Reactivate if existing soft-deleted/retired
         const reactivated = await db.project.update({
           where: { id: existing.id },
           data: { active: true },
@@ -90,10 +89,7 @@ export async function POST(request: Request) {
     }
 
     const newProject = await db.project.create({
-      data: {
-        name: trimmedName,
-        active: true,
-      },
+      data: { name: trimmedName, active: true, userId: user.id },
     });
 
     return NextResponse.json(newProject, { status: 201 });

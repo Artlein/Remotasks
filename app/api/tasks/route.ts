@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server';
-import { db, seedInitialDataIfNeeded } from '@/lib/db';
+import { db, seedUserDataIfNeeded } from '@/lib/db';
 import { parseDurationToMinutes, getLogicalDate } from '@/lib/logical-day';
+import { getSessionUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-
 export async function GET(request: Request) {
   try {
-    await seedInitialDataIfNeeded();
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+    await seedUserDataIfNeeded(user.id);
 
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');
@@ -16,13 +19,10 @@ export async function GET(request: Request) {
     const status = searchParams.get('status');
     const search = searchParams.get('search');
 
-    const where: any = {};
+    const where: any = { userId: user.id };
 
     if (startDate && endDate) {
-      where.date = {
-        gte: startDate,
-        lte: endDate,
-      };
+      where.date = { gte: startDate, lte: endDate };
     } else if (startDate) {
       where.date = { gte: startDate };
     } else if (endDate) {
@@ -47,13 +47,8 @@ export async function GET(request: Request) {
 
     const tasks = await db.task.findMany({
       where,
-      include: {
-        project: true,
-      },
-      orderBy: [
-        { date: 'desc' },
-        { createdAt: 'desc' },
-      ],
+      include: { project: true },
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
     });
 
     return NextResponse.json(tasks);
@@ -65,7 +60,10 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    await seedInitialDataIfNeeded();
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+
+    await seedUserDataIfNeeded(user.id);
     const body = await request.json();
     const { date, projectId, description, durationStr, durationMinutes, status, notes } = body;
 
@@ -91,23 +89,22 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get system cutoff setting to compute default logical date if date not provided
     let taskDate = date;
     if (!taskDate) {
-      const settings = await db.systemSettings.findUnique({ where: { id: 'default' } });
+      const settings = await db.userSettings.findUnique({ where: { userId: user.id } });
       const cutoff = settings?.logicalCutoffHour ?? 0;
       taskDate = getLogicalDate(new Date(), cutoff);
     }
 
-    // Validate project existence or fallback
+    // Validate project belongs to this user
     let validProjectId = projectId;
-    const projectExists = await db.project.findUnique({ where: { id: validProjectId } });
+    const projectExists = await db.project.findFirst({ where: { id: validProjectId, userId: user.id } });
     if (!projectExists) {
-      const existingByName = await db.project.findFirst({ where: { active: true } });
-      if (existingByName) {
-        validProjectId = existingByName.id;
+      const fallback = await db.project.findFirst({ where: { userId: user.id, active: true } });
+      if (fallback) {
+        validProjectId = fallback.id;
       } else {
-        const created = await db.project.create({ data: { name: 'FNA1', active: true } });
+        const created = await db.project.create({ data: { name: 'FNA1', active: true, userId: user.id } });
         validProjectId = created.id;
       }
     }
@@ -116,14 +113,13 @@ export async function POST(request: Request) {
       data: {
         date: taskDate,
         projectId: validProjectId,
+        userId: user.id,
         description: description.trim(),
         durationMinutes: computedMinutes,
         status: status || 'Done',
         notes: notes ? notes.trim() : null,
       },
-      include: {
-        project: true,
-      },
+      include: { project: true },
     });
 
     return NextResponse.json(newTask, { status: 201 });

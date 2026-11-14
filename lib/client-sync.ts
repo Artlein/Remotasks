@@ -43,11 +43,21 @@ export const DEFAULT_SETTINGS: SystemSettingsItem = {
   hourlyRate: 0.0,
 };
 
-const STORAGE_KEYS = {
-  TASKS: 'remotasks_tasks_v1',
-  PROJECTS: 'remotasks_projects_v1',
-  SETTINGS: 'remotasks_settings_v1',
-};
+function getStorageKeys(userId?: string) {
+  const suffix = userId ? `_${userId}` : '';
+  return {
+    TASKS: `remotasks_tasks_v1${suffix}`,
+    PROJECTS: `remotasks_projects_v1${suffix}`,
+    SETTINGS: `remotasks_settings_v1${suffix}`,
+  };
+}
+
+// Resolved at runtime from window so it always reflects the active user
+function STORAGE_KEYS() {
+  if (typeof window === 'undefined') return getStorageKeys();
+  const userId = (window as any).__RT_USER_ID as string | undefined;
+  return getStorageKeys(userId);
+}
 
 /**
  * Load tasks from LocalStorage
@@ -55,7 +65,7 @@ const STORAGE_KEYS = {
 export function loadStoredTasks(): TaskItem[] | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.TASKS);
+    const raw = localStorage.getItem(STORAGE_KEYS().TASKS);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) return parsed;
@@ -72,7 +82,7 @@ export function loadStoredTasks(): TaskItem[] | null {
 export function saveStoredTasks(tasks: TaskItem[]) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEYS.TASKS, JSON.stringify(tasks));
+    localStorage.setItem(STORAGE_KEYS().TASKS, JSON.stringify(tasks));
   } catch (e) {
     console.error('Error saving tasks to storage:', e);
   }
@@ -84,7 +94,7 @@ export function saveStoredTasks(tasks: TaskItem[]) {
 export function loadStoredProjects(): ProjectItem[] | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.PROJECTS);
+    const raw = localStorage.getItem(STORAGE_KEYS().PROJECTS);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -101,7 +111,7 @@ export function loadStoredProjects(): ProjectItem[] | null {
 export function saveStoredProjects(projects: ProjectItem[]) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects));
+    localStorage.setItem(STORAGE_KEYS().PROJECTS, JSON.stringify(projects));
   } catch (e) {
     console.error('Error saving projects to storage:', e);
   }
@@ -113,7 +123,7 @@ export function saveStoredProjects(projects: ProjectItem[]) {
 export function loadStoredSettings(): SystemSettingsItem | null {
   if (typeof window === 'undefined') return null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+    const raw = localStorage.getItem(STORAGE_KEYS().SETTINGS);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') return parsed;
@@ -130,7 +140,7 @@ export function loadStoredSettings(): SystemSettingsItem | null {
 export function saveStoredSettings(settings: SystemSettingsItem) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+    localStorage.setItem(STORAGE_KEYS().SETTINGS, JSON.stringify(settings));
   } catch (e) {
     console.error('Error saving settings to storage:', e);
   }

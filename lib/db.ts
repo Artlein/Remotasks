@@ -47,19 +47,19 @@ export const DEFAULT_PROJECT_NAMES = [
 ];
 
 /**
- * Ensures initial default projects and settings are present in the database.
+ * Ensures initial default projects and settings are present for a given user.
  */
-export async function seedInitialDataIfNeeded() {
+export async function seedUserDataIfNeeded(userId: string) {
   try {
     // Seed default settings if missing
-    const existingSettings = await db.systemSettings.findUnique({
-      where: { id: 'default' },
+    const existingSettings = await db.userSettings.findUnique({
+      where: { userId },
     });
 
     if (!existingSettings) {
-      await db.systemSettings.create({
+      await db.userSettings.create({
         data: {
-          id: 'default',
+          userId,
           logicalCutoffHour: 0,
           dailyTargetHours: 8.0,
           hourlyRate: 0.0,
@@ -67,19 +67,23 @@ export async function seedInitialDataIfNeeded() {
       });
     }
 
-    // Seed default projects if no projects exist
-    const projectCount = await db.project.count();
+    // Seed default projects if user has none
+    const projectCount = await db.project.count({ where: { userId } });
     if (projectCount === 0) {
       for (const name of DEFAULT_PROJECT_NAMES) {
         await db.project.create({
-          data: {
-            name,
-            active: true,
-          },
+          data: { name, active: true, userId },
         });
       }
     }
   } catch (error) {
-    console.error('Error during auto-seeding:', error);
+    console.error('Error during user auto-seeding:', error);
   }
+}
+
+/**
+ * Legacy global seed — kept for backward compat only.
+ */
+export async function seedInitialDataIfNeeded() {
+  // No-op — seeding is now per-user via seedUserDataIfNeeded
 }
