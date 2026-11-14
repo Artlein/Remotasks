@@ -1,37 +1,10 @@
 import { PrismaClient } from '@prisma/client';
-import fs from 'fs';
-import path from 'path';
-
-let dbUrl: string | undefined = undefined;
-
-// On Vercel Serverless environment, use /tmp which is the only writable directory
-if (process.env.VERCEL) {
-  const tmpDbPath = '/tmp/dev.db';
-  if (!fs.existsSync(tmpDbPath)) {
-    const possibleSourcePaths = [
-      path.join(process.cwd(), 'prisma', 'dev.db'),
-      path.join(process.cwd(), 'dev.db'),
-    ];
-    for (const src of possibleSourcePaths) {
-      if (fs.existsSync(src)) {
-        try {
-          fs.copyFileSync(src, tmpDbPath);
-          break;
-        } catch (e) {
-          console.error('Error copying sqlite db to /tmp:', e);
-        }
-      }
-    }
-  }
-  dbUrl = 'file:/tmp/dev.db';
-}
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
 
 export const db =
   globalForPrisma.prisma ||
   new PrismaClient({
-    datasources: dbUrl ? { db: { url: dbUrl } } : undefined,
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   });
 
