@@ -148,7 +148,7 @@ export function HeaderBanner({
               <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs shadow-inner">
                 <div className="relative w-5 h-5 rounded-full overflow-hidden shrink-0 border border-slate-700 bg-slate-800">
                   <Image
-                    src={currentUser.avatar || `/avatars/${currentUser.username.toLowerCase()}.svg`}
+                    src={currentUser.avatar || `/avatars/${currentUser.username.toLowerCase()}.png`}
                     alt={currentUser.username}
                     fill
                     className="object-cover"

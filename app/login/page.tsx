@@ -18,14 +18,14 @@ const PROFILES: Profile[] = [
     id: 'arvin',
     name: 'Arvin',
     role: 'EQC Lead Auditor',
-    avatar: '/avatars/arvin.svg',
+    avatar: '/avatars/arvin.png',
     glowColor: 'shadow-blue-500/20 border-blue-500/40 hover:border-blue-400',
   },
   {
     id: 'jude',
     name: 'Jude',
     role: 'EQC Quality Auditor',
-    avatar: '/avatars/jude.svg',
+    avatar: '/avatars/jude.png',
     glowColor: 'shadow-purple-500/20 border-purple-500/40 hover:border-purple-400',
   },
 ];

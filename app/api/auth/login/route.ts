@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         data: {
           username: cleanUsername,
           pin: cleanPin,
-          avatar: `/avatars/${cleanUsername}.svg`,
+          avatar: `/avatars/${cleanUsername}.png`,
         },
       });
 
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       // User was pre-created but has no PIN yet -> First login sets their PIN!
       user = await db.user.update({
         where: { id: user.id },
-        data: { pin: cleanPin, avatar: user.avatar || `/avatars/${cleanUsername}.svg` },
+        data: { pin: cleanPin, avatar: user.avatar || `/avatars/${cleanUsername}.png` },
       });
     } else {
       // User already has a set PIN -> Verify it!
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
       success: true,
       username: user.username,
       userId: user.id,
-      avatar: user.avatar || `/avatars/${cleanUsername}.svg`,
+      avatar: user.avatar || `/avatars/${cleanUsername}.png`,
     });
 
     response.cookies.set(SESSION_COOKIE_NAME, user.id, {

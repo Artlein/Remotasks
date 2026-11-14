@@ -24,7 +24,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     return {
       id: user.id,
       username: user.username,
-      avatar: user.avatar || `/avatars/${user.username.toLowerCase()}.svg`,
+      avatar: user.avatar || `/avatars/${user.username.toLowerCase()}.png`,
     };
   } catch {
     return null;
