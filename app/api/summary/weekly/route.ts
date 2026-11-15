@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, seedUserDataIfNeeded } from '@/lib/db';
+import { db } from '@/lib/db';
 import { parseISO, startOfWeek, endOfWeek, format } from 'date-fns';
 import { getSessionUser } from '@/lib/auth';
 
@@ -9,8 +9,6 @@ export async function GET() {
   try {
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-
-    await seedUserDataIfNeeded(user.id);
 
     const settings = await db.userSettings.findUnique({ where: { userId: user.id } });
     const dailyTarget = settings?.dailyTargetHours ?? 8.0;

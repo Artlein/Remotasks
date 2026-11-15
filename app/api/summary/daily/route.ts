@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
-import { db, seedUserDataIfNeeded } from '@/lib/db';
+import { db } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-
-    await seedUserDataIfNeeded(user.id);
 
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');

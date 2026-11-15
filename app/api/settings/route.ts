@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, seedUserDataIfNeeded, withRetry } from '@/lib/db';
+import { db, withRetry } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -8,8 +8,6 @@ export async function GET() {
   try {
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-
-    await seedUserDataIfNeeded(user.id);
 
     let settings = await withRetry(() =>
       db.userSettings.findUnique({ where: { userId: user.id } })
@@ -39,7 +37,6 @@ export async function POST(request: Request) {
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-    await seedUserDataIfNeeded(user.id);
     const body = await request.json();
     const { logicalCutoffHour, dailyTargetHours, hourlyRate } = body;
 

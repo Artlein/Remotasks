@@ -10,9 +10,19 @@ export interface SessionUser {
   avatar?: string | null;
 }
 
+const userCache = new Map<string, { user: SessionUser; expires: number }>();
+
+export function invalidateSessionUserCache(userId?: string) {
+  if (userId) {
+    userCache.delete(userId);
+  } else {
+    userCache.clear();
+  }
+}
+
 /**
  * Returns the logged-in user from the session cookie, or null if not authenticated.
- * Uses retry logic to handle Supabase cold-start timeouts.
+ * Uses in-memory caching and retry logic to avoid redundant Supabase roundtrips.
  */
 export async function getSessionUser(): Promise<SessionUser | null> {
   let userId: string | undefined;
@@ -21,14 +31,23 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     userId = cookieStore.get(SESSION_COOKIE_NAME)?.value;
     if (!userId) return null;
 
+    // Fast memory cache check (60s TTL)
+    const cached = userCache.get(userId);
+    if (cached && cached.expires > Date.now()) {
+      return cached.user;
+    }
+
     const user = await withRetry(() => db.user.findUnique({ where: { id: userId! } }));
     if (!user) return null;
 
-    return {
+    const sessionUser: SessionUser = {
       id: user.id,
       username: user.username,
       avatar: user.avatar || `/avatars/${user.username.toLowerCase()}.png`,
     };
+
+    userCache.set(userId, { user: sessionUser, expires: Date.now() + 60 * 1000 });
+    return sessionUser;
   } catch (error) {
     console.error('getSessionUser DB error (after retries):', error);
     // If DB is momentarily unreachable after retries, don't kick out valid session

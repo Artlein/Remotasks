@@ -251,6 +251,45 @@ export default function DashboardPage() {
     fetchProjects();
   };
 
+  // Instant optimistic handlers for 0ms task addition & status changes
+  const handleOptimisticAddTask = (optimisticTask: TaskItem) => {
+    setTasks((prev) => [optimisticTask, ...prev]);
+    saveStoredTasks([optimisticTask, ...tasks]);
+  };
+
+  const handleTaskReconciled = (tempOrExistingId: string, realOrUpdatedTask: TaskItem) => {
+    setTasks((prev) => {
+      const updated = prev.map((t) => (t.id === tempOrExistingId ? realOrUpdatedTask : t));
+      saveStoredTasks(updated, true);
+      return updated;
+    });
+  };
+
+  const handleRevertOptimisticTask = (tempId: string) => {
+    setTasks((prev) => {
+      const updated = prev.filter((t) => t.id !== tempId);
+      saveStoredTasks(updated, true);
+      return updated;
+    });
+  };
+
+  const handleTaskSavedFromModal = (savedTask?: TaskItem, isEdit?: boolean) => {
+    if (savedTask) {
+      setTasks((prev) => {
+        let updated: TaskItem[];
+        if (isEdit) {
+          updated = prev.map((t) => (t.id === savedTask.id ? savedTask : t));
+        } else {
+          updated = [savedTask, ...prev.filter((t) => t.id !== savedTask.id)];
+        }
+        saveStoredTasks(updated, true);
+        return updated;
+      });
+    } else {
+      handleRefreshAll();
+    }
+  };
+
   const handleDeleteTask = async (taskId: string) => {
     if (!confirm('Are you sure you want to delete this task entry?')) return;
     
@@ -399,6 +438,9 @@ export default function DashboardPage() {
               setIsTaskModalOpen(true);
             }}
             onDeleteTask={handleDeleteTask}
+            onOptimisticAdd={handleOptimisticAddTask}
+            onTaskReconciled={handleTaskReconciled}
+            onRevertOptimistic={handleRevertOptimisticTask}
             onTaskCreatedOrUpdated={handleRefreshAll}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
@@ -460,7 +502,7 @@ export default function DashboardPage() {
         projects={projects}
         cutoffHour={cutoffHour}
         initialTask={editingTask}
-        onSave={handleRefreshAll}
+        onSave={handleTaskSavedFromModal}
         onOpenProjectManager={() => setIsProjectModalOpen(true)}
       />
 

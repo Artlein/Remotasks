@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, seedUserDataIfNeeded, DEFAULT_PROJECT_NAMES, withRetry } from '@/lib/db';
+import { db, DEFAULT_PROJECT_NAMES, withRetry } from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -8,8 +8,6 @@ export async function GET(request: Request) {
   try {
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-
-    await seedUserDataIfNeeded(user.id);
 
     const { searchParams } = new URL(request.url);
     const includeInactive = searchParams.get('all') === 'true';
@@ -69,7 +67,6 @@ export async function POST(request: Request) {
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-    await seedUserDataIfNeeded(user.id);
     const body = await request.json();
     const { name } = body;
 

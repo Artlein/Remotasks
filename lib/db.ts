@@ -20,6 +20,11 @@ function sanitizeDbUrl(raw: string | undefined, fallback: string): string {
   if (!s.startsWith('postgresql://') && !s.startsWith('postgres://')) {
     return fallback;
   }
+  // Optimize for PgBouncer pooler if port 6543
+  if (s.includes(':6543') && !s.includes('connection_limit')) {
+    const sep = s.includes('?') ? '&' : '?';
+    s = `${s}${sep}connection_limit=5&pool_timeout=10&connect_timeout=10`;
+  }
   return s;
 }
 

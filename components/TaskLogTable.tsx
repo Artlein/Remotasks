@@ -33,6 +33,9 @@ interface TaskLogTableProps {
   onEditTask: (task: TaskItem) => void;
   onDeleteTask: (taskId: string) => void;
   onTaskCreatedOrUpdated: () => void;
+  onOptimisticAdd?: (task: TaskItem) => void;
+  onTaskReconciled?: (tempId: string, realTask: TaskItem) => void;
+  onRevertOptimistic?: (tempId: string) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   selectedProjectId: string;
@@ -54,6 +57,9 @@ export function TaskLogTable({
   onEditTask,
   onDeleteTask,
   onTaskCreatedOrUpdated,
+  onOptimisticAdd,
+  onTaskReconciled,
+  onRevertOptimistic,
   searchQuery,
   setSearchQuery,
   selectedProjectId,
@@ -120,18 +126,40 @@ export function TaskLogTable({
     }
 
     const descriptionToSubmit = fastDescription.trim();
+    const durationToSubmit = fastDurationStr;
+    const taskDate = selectedDateStr || getLogicalDate(new Date(), cutoffHour);
+    const projectObj = projects.find((p) => p.id === fastProjectId) || { id: fastProjectId, name: 'Project' };
+
+    // Optimistic item for 0ms instant display
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const optimisticTask: TaskItem = {
+      id: tempId,
+      date: taskDate,
+      projectId: fastProjectId,
+      project: projectObj,
+      description: descriptionToSubmit,
+      durationMinutes: minutes,
+      status: fastStatus,
+      notes: null,
+    };
+
+    // Immediately reset input fields and show task in UI
     setFastDescription('');
-    setIsFastSubmitting(true);
+    setFastDurationStr('30m');
+
+    if (onOptimisticAdd) {
+      onOptimisticAdd(optimisticTask);
+    }
 
     try {
       const res = await fetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          date: selectedDateStr || getLogicalDate(new Date(), cutoffHour),
+          date: taskDate,
           projectId: fastProjectId,
           description: descriptionToSubmit,
-          durationStr: fastDurationStr,
+          durationStr: durationToSubmit,
           durationMinutes: minutes,
           status: fastStatus,
         }),
@@ -142,16 +170,18 @@ export function TaskLogTable({
         throw new Error(data.error || 'Failed to add task');
       }
 
-      if (data && data.id) {
-        saveStoredTasks([data, ...tasks]);
+      if (onTaskReconciled) {
+        onTaskReconciled(tempId, data);
+      } else {
+        onTaskCreatedOrUpdated();
       }
-
-      onTaskCreatedOrUpdated();
     } catch (err: any) {
+      if (onRevertOptimistic) {
+        onRevertOptimistic(tempId);
+      }
       setFastDescription(descriptionToSubmit);
+      setFastDurationStr(durationToSubmit);
       setFastError(err.message || 'Error logging task');
-    } finally {
-      setIsFastSubmitting(false);
     }
   };
 
@@ -173,6 +203,12 @@ export function TaskLogTable({
       Pending: 'Done',
     };
     const nextStatus = statusCycle[task.status] || 'Done';
+    const updatedTask: TaskItem = { ...task, status: nextStatus };
+
+    // 0ms delay: Optimistically toggle
+    if (onTaskReconciled) {
+      onTaskReconciled(task.id, updatedTask);
+    }
 
     try {
       const res = await fetch(`/api/tasks/${task.id}`, {
@@ -180,12 +216,12 @@ export function TaskLogTable({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: nextStatus }),
       });
-
-      if (res.ok) {
-        onTaskCreatedOrUpdated();
+      if (!res.ok) {
+        if (onTaskReconciled) onTaskReconciled(task.id, task);
       }
     } catch (e) {
       console.error('Failed to toggle status:', e);
+      if (onTaskReconciled) onTaskReconciled(task.id, task);
     }
   };
 

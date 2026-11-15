@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Clock, Calendar, Folder, FileText, CheckCircle2, AlertCircle, Plus } from 'lucide-react';
 import { getLogicalDate, parseDurationToMinutes, formatMinutesToDuration } from '@/lib/logical-day';
-import { saveStoredTasks, loadStoredTasks } from '@/lib/client-sync';
+import { saveStoredTasks, loadStoredTasks, TaskItem } from '@/lib/client-sync';
 
 interface Project {
   id: string;
@@ -25,7 +25,7 @@ interface TaskEntryModalProps {
     status: string;
     notes?: string | null;
   } | null;
-  onSave: () => void;
+  onSave: (savedTask?: TaskItem, isEdit?: boolean) => void;
   onOpenProjectManager: () => void;
 }
 
@@ -148,7 +148,7 @@ export function TaskEntryModal({
         saveStoredTasks([data, ...current.filter((t) => t.id !== data.id)]);
       }
 
-      onSave();
+      onSave(data, !!initialTask?.id);
       onClose();
     } catch (err: any) {
       setErrorMsg(err.message || 'An error occurred while saving task.');

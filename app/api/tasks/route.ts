@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, seedUserDataIfNeeded, withRetry } from '@/lib/db';
+import { db, withRetry } from '@/lib/db';
 import { parseDurationToMinutes, getLogicalDate } from '@/lib/logical-day';
 import { getSessionUser } from '@/lib/auth';
 
@@ -9,8 +9,6 @@ export async function GET(request: Request) {
   try {
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-
-    await seedUserDataIfNeeded(user.id);
 
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');
@@ -65,7 +63,6 @@ export async function POST(request: Request) {
     const user = await getSessionUser();
     if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
 
-    await seedUserDataIfNeeded(user.id);
     const body = await request.json();
     const { date, projectId, description, durationStr, durationMinutes, status, notes } = body;
 
