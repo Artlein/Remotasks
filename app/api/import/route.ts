@@ -42,6 +42,15 @@ export async function POST(request: Request) {
       projectMap.set(p.name.toLowerCase(), p.id);
     }
 
+    // Build a signature set of existing tasks to prevent duplicate imports
+    const existingTasks = await db.task.findMany({
+      where: { userId: user.id },
+      select: { date: true, projectId: true, description: true, durationMinutes: true },
+    });
+    const existingSignatures = new Set(
+      existingTasks.map((t) => `${t.date}|${t.projectId}|${t.description}|${t.durationMinutes}`)
+    );
+
     let importedCount = 0;
     let skippedCount = 0;
 
@@ -111,6 +120,13 @@ export async function POST(request: Request) {
       if (cleanStatus.includes('review')) status = 'Review';
       else if (cleanStatus.includes('pend')) status = 'Pending';
 
+      // Skip if an identical task already exists in DB (prevent duplicate imports)
+      const sig = `${formattedDate}|${projectId}|${description}|${durationMinutes}`;
+      if (existingSignatures.has(sig)) {
+        skippedCount++;
+        continue;
+      }
+
       await db.task.create({
         data: {
           date: formattedDate,
@@ -123,6 +139,7 @@ export async function POST(request: Request) {
         },
       });
 
+      existingSignatures.add(sig);
       importedCount++;
     }
 

@@ -51,6 +51,7 @@ model Task {
   @@index([date])
   @@index([projectId])
   @@index([userId])
+  @@index([userId, date])
 }
 
 model UserSettings {

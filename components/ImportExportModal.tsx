@@ -135,7 +135,9 @@ export function ImportExportModal({
         const data = JSON.parse(raw);
 
         if (data.tasks && Array.isArray(data.tasks)) {
-          saveStoredTasks(data.tasks);
+          // Use isDeletion=true to fully replace local storage with the backup
+          // rather than merging, which could resurrect stale duplicate IDs
+          saveStoredTasks(data.tasks, true);
         }
         if (data.projects && Array.isArray(data.projects)) {
           saveStoredProjects(data.projects);

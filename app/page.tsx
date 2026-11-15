@@ -110,14 +110,12 @@ export default function DashboardPage() {
             localStorage.setItem('remotasks_active_username', user.username);
           } catch {}
 
+          // Local tasks are only used for instant display before the server
+          // response arrives. Once fetchTasks() runs, the server data fully
+          // replaces them (saveStoredTasks with isDeletion=true).
           const userTasks = loadStoredTasks(user.id, user.username);
           if (userTasks && userTasks.length > 0) {
-            setTasks((prev) => {
-              const map = new Map<string, TaskItem>();
-              userTasks.forEach((t) => map.set(t.id, t));
-              prev.forEach((t) => map.set(t.id, t));
-              return Array.from(map.values()).sort((a, b) => b.date.localeCompare(a.date));
-            });
+            setTasks(userTasks);
           }
         }
       })

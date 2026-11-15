@@ -200,41 +200,13 @@ export function saveStoredTasks(tasks: TaskItem[], isDeletion = false) {
 }
 
 /**
- * Automatically sync local tasks to PostgreSQL with retries and batching.
+ * @deprecated Legacy sync is permanently completed. This function is a no-op
+ * kept only so any stale compiled code referencing it won't throw at runtime.
  */
-export async function syncLegacyTasksIfPresent(userId: string, username: string) {
-  if (typeof window === 'undefined' || username !== 'arvin') return;
-  try {
-    const allTasks = loadStoredTasks(userId, username);
-    if (!allTasks || allTasks.length === 0) return;
-
-    // Retry up to 3 times
-    let success = false;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const res = await fetch('/api/tasks/sync-legacy', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tasks: allTasks }),
-        });
-
-        if (res.ok) {
-          success = true;
-          break;
-        }
-      } catch {
-        await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
-      }
-    }
-
-    if (success) {
-      const keys = getStorageKeys(userId);
-      localStorage.setItem(keys.TASKS, JSON.stringify(allTasks));
-      localStorage.setItem(PERMANENT_VAULT_KEY, JSON.stringify(allTasks));
-    }
-  } catch (err) {
-    console.error('Error syncing legacy tasks to server:', err);
-  }
+export async function syncLegacyTasksIfPresent(_userId: string, _username: string) {
+  // No-op — legacy migration was completed and this function caused the 8x
+  // duplication bug. It must never run again.
+  return;
 }
 
 /**
