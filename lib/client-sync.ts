@@ -120,20 +120,22 @@ export function loadStoredTasks(overrideUserId?: string, overrideUsername?: stri
       } catch {}
     };
 
-    // 1. Collect from permanent vault
-    collectTasks(localStorage.getItem(PERMANENT_VAULT_KEY));
-
-    // 2. Collect from user-scoped key
+    // 1. First prioritize user-scoped key
     collectTasks(localStorage.getItem(keys.TASKS));
 
-    // 3. Collect from legacy global key
-    collectTasks(localStorage.getItem('remotasks_tasks_v1'));
+    // 2. If nothing found, check permanent vault
+    if (taskMap.size === 0) {
+      collectTasks(localStorage.getItem(PERMANENT_VAULT_KEY));
+    }
 
-    // 4. Scan all localStorage keys matching remotasks_tasks
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k && k.startsWith('remotasks_tasks')) {
-        collectTasks(localStorage.getItem(k));
+    // 3. Fallback to legacy keys only if still completely empty
+    if (taskMap.size === 0) {
+      collectTasks(localStorage.getItem('remotasks_tasks_v1'));
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('remotasks_tasks')) {
+          collectTasks(localStorage.getItem(k));
+        }
       }
     }
 
@@ -178,6 +180,20 @@ export function saveStoredTasks(tasks: TaskItem[], isDeletion = false) {
     const json = JSON.stringify(finalTasks);
     localStorage.setItem(keys.TASKS, json);
     localStorage.setItem(PERMANENT_VAULT_KEY, json);
+
+    if (isDeletion) {
+      // Clean up stale legacy keys to prevent resurrection of deleted/duplicate records
+      try {
+        const toRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('remotasks_tasks') && k !== keys.TASKS && k !== PERMANENT_VAULT_KEY) {
+            toRemove.push(k);
+          }
+        }
+        toRemove.forEach((k) => localStorage.removeItem(k));
+      } catch {}
+    }
   } catch (e) {
     console.error('Error saving tasks to storage:', e);
   }

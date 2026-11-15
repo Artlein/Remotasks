@@ -18,7 +18,6 @@ import {
   DEFAULT_SETTINGS,
   loadStoredTasks,
   saveStoredTasks,
-  syncLegacyTasksIfPresent,
   loadStoredProjects,
   saveStoredProjects,
   loadStoredSettings,
@@ -120,11 +119,6 @@ export default function DashboardPage() {
               return Array.from(map.values()).sort((a, b) => b.date.localeCompare(a.date));
             });
           }
-
-          // Run legacy sync non-blocking in background so UI renders instantly
-          if (user.username === 'arvin') {
-            syncLegacyTasksIfPresent(user.id, user.username).catch(() => {});
-          }
         }
       })
       .catch(() => {});
@@ -187,18 +181,8 @@ export default function DashboardPage() {
           // If query parameters are active, only update filtered view
           const hasFilters = startDate || endDate || selectedProjectId !== 'ALL' || selectedStatus !== 'ALL' || searchQuery;
           if (!hasFilters) {
-            setTasks((prev) => {
-              const mergedMap = new Map<string, TaskItem>();
-              // Load from local storage vault as well to be 100% sure nothing was lost
-              const localTasks = loadStoredTasks() || [];
-              localTasks.forEach((t) => mergedMap.set(t.id, t));
-              prev.forEach((t) => mergedMap.set(t.id, t));
-              data.forEach((t: TaskItem) => mergedMap.set(t.id, t));
-
-              const merged = Array.from(mergedMap.values()).sort((a, b) => b.date.localeCompare(a.date));
-              saveStoredTasks(merged);
-              return merged;
-            });
+            setTasks(data);
+            saveStoredTasks(data, true);
           } else {
             setTasks(data);
           }
